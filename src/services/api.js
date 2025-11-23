@@ -18,6 +18,15 @@ const api = axios.create({
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('auth_token');
+        // Debug: log baseURL, url and whether token exists
+        try {
+            // full request target (will be proxied by Vite if baseURL='/api')
+            const target = (config.baseURL || '') + (config.url || '');
+            // eslint-disable-next-line no-console
+            console.log('[api] request ->', config.method?.toUpperCase(), target, token ? '(token attached)' : '(no token)');
+        } catch (e) {
+            // ignore logging errors
+        }
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
@@ -69,4 +78,61 @@ export const authService = {
     }
 };
 
+export const userService = {
+    getHome: async () => {
+        const response = await api.get('/user/home');
+        return response.data;
+    },
+    getLichTap: async () => {
+        const response = await api.get('/user/lich-tap');
+        return response.data;
+    },
+    getTaiKhoan: async () => {
+        const response = await api.get('/user/taikhoan');
+        return response.data;
+    },
+    updateTaiKhoan: async (updateRequest) => {
+        const response = await api.put('/user/taikhoan', updateRequest);
+        return response.data;
+    }
+};
+
+export const paymentService = {
+    createMomoPayment: async (maHD) => {
+        const response = await api.post(`/momo/pay/${maHD}`);
+        return response.data;
+    }
+};
+
+export const invoiceService = {
+    getHoaDon: async (maHD) => {
+        const response = await api.get(`/thanh-toan/${maHD}`);
+        return response.data;
+    }
+};
+
+export const dichVuGymService = {
+    getDanhSachBoMon: async () => {
+        const response = await api.get('/dich-vu-gym/dang-kydv');
+        return response.data;
+    },
+    getDichVuTheoBoMon: async (maBM, thoiHanFilter) => {
+        const params = { maBM };
+        if (thoiHanFilter) params.thoiHanFilter = thoiHanFilter;
+        const response = await api.get('/dich-vu-gym/dich-vu-theo-bo-mon', { params });
+        return response.data;
+    },
+    getChonLop: async (maDV) => {
+        const response = await api.get('/dich-vu-gym/chonlop', { params: { maDV } });
+        return response.data;
+    },
+    getChonPT: async (maDV) => {
+        const response = await api.get('/dich-vu-gym/chonpt', { params: { maDV } });
+        return response.data;
+    },
+    dangKyDichVuUniversal: async (payload) => {
+        const response = await api.post('/dich-vu-gym/dang-ky-dv-universal', payload);
+        return response.data;
+    }
+};
 export default api;

@@ -19,7 +19,7 @@ const Login = () => {
       const token = response.token || response.access_token; 
       if (token) {
         localStorage.setItem('auth_token', token);
-        navigate('/'); 
+        navigate('/user/home'); 
       } else {
          setError('Đăng nhập thất bại. Không nhận được token.');
       }
@@ -36,7 +36,7 @@ const Login = () => {
       const token = response.token || response.access_token;
       if (token) {
         localStorage.setItem('auth_token', token);
-        navigate('/');
+        navigate('/user/home');
       }
     } catch (err) {
       setError('Đăng nhập Google thất bại. Vui lòng thử lại.');
