@@ -130,6 +130,10 @@ export const dichVuGymService = {
         const response = await api.get('/dich-vu-gym/chonpt', { params: { maDV } });
         return response.data;
     },
+    getDichVuCuaToi: async () => {
+        const response = await api.get('/dich-vu-gym/dich-vu-cua-toi');
+        return response.data;
+    },
     dangKyDichVuUniversal: async (payload) => {
         const response = await api.post('/dich-vu-gym/dang-ky-dv-universal', payload);
         return response.data;

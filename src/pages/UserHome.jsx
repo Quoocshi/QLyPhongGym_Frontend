@@ -107,7 +107,7 @@ const UserHome = () => {
           <div className="flex space-x-3">
             <button onClick={() => navigate('/user/dang-ky')} className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded shadow hover:scale-[1.02] transition">Đăng ký gói tập</button>
             <button onClick={() => navigate('/user/lich-tap')} className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded shadow hover:scale-[1.02] transition">Xem lịch tập</button>
-            <button onClick={() => alert('Đổi username hiện chưa được backend hỗ trợ')} className="px-4 py-2 border rounded hover:bg-gray-50">Chỉnh sửa tài khoản</button>
+            <button onClick={() => navigate('/user/dich-vu-cua-toi')} className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded shadow hover:scale-[1.02] transition">Dịch vụ của tôi</button>
           </div>
         </div>
 

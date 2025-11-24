@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { dichVuGymService, userService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { Box, Users, Clock, CreditCard, User, DollarSign, CheckCircle, Info } from 'lucide-react';
+import BackToUserHome from '../components/BackToUserHome';
 
 const RegisterService = () => {
   const [boMonList, setBoMonList] = useState([]);
@@ -130,6 +131,7 @@ const RegisterService = () => {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
+      <BackToUserHome className="mb-4" />
       <div className="flex items-start justify-between mb-6 gap-6">
         <div className="flex-1">
           <div className="flex items-center justify-between mb-4">

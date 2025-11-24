@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { invoiceService } from '../services/api';
 import { ArrowLeft, CreditCard } from 'lucide-react';
+import BackToUserHome from '../components/BackToUserHome';
 
 const PaymentStatus = () => {
   const { maHD } = useParams();
@@ -44,6 +45,7 @@ const PaymentStatus = () => {
 
   return (
     <div className="p-6 max-w-3xl mx-auto bg-white rounded shadow">
+      <BackToUserHome className="mb-4" />
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-2 rounded hover:bg-gray-100"><ArrowLeft className="w-4 h-4"/></button>

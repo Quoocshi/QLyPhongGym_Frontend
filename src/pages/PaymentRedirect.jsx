@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { paymentService } from '../services/api';
 import { Loader2, ExternalLink, CreditCard } from 'lucide-react';
+import BackToUserHome from '../components/BackToUserHome';
 
 const PaymentRedirect = () => {
   const { maHD } = useParams();
@@ -45,7 +46,9 @@ const PaymentRedirect = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="max-w-lg w-full bg-white rounded shadow p-6 text-center">
+      <div className="w-full max-w-lg">
+        <BackToUserHome className="mb-4" />
+        <div className="bg-white rounded shadow p-6 text-center">
         <div className="flex items-center justify-center mb-4">
           <div className="p-3 rounded-full bg-indigo-50 text-indigo-600"><CreditCard className="w-6 h-6"/></div>
         </div>

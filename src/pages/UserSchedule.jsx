@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { userService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { Calendar } from 'lucide-react';
+import BackToUserHome from '../components/BackToUserHome';
 
 const UserSchedule = () => {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ const UserSchedule = () => {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
+      <BackToUserHome className="mb-4" />
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Lịch tập của bạn</h1>
         <div className="text-sm text-gray-500 flex items-center gap-2"><Calendar className="w-4 h-4"/> Lịch hiện tại</div>
