@@ -9,6 +9,7 @@ import PaymentRedirect from './pages/PaymentRedirect';
 import PaymentStatus from './pages/PaymentStatus';
 import RegisterService from './pages/RegisterService';
 import MyServices from './pages/MyServices';
+import TrainerHome from './pages/TrainerHome';
 
 // Replace with your actual Google Client ID from Google Cloud Console
 // You can also use environment variable: import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -22,12 +23,13 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-            <Route path="/user/home" element={<UserHome />} />
-            <Route path="/user/lich-tap" element={<UserSchedule />} />
-            <Route path="/user/dich-vu-cua-toi" element={<MyServices />} />
-            <Route path="/payment/:maHD" element={<PaymentRedirect />} />
-            <Route path="/thanh-toan/:maHD" element={<PaymentStatus />} />
-            <Route path="/user/dang-ky" element={<RegisterService />} />
+          <Route path="/trainer/home" element={<TrainerHome />} />
+          <Route path="/user/home" element={<UserHome />} />
+          <Route path="/user/lich-tap" element={<UserSchedule />} />
+          <Route path="/user/dich-vu-cua-toi" element={<MyServices />} />
+          <Route path="/payment/:maHD" element={<PaymentRedirect />} />
+          <Route path="/thanh-toan/:maHD" element={<PaymentStatus />} />
+          <Route path="/user/dang-ky" element={<RegisterService />} />
         </Routes>
       </Router>
     </GoogleOAuthProvider>

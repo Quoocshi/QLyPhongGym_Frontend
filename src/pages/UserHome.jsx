@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { userService } from '../services/api';
+import { userService, authService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, Phone } from 'lucide-react';
+import { User, Mail, Phone, LogOut } from 'lucide-react';
 
 const UserHome = () => {
   const navigate = useNavigate();
@@ -68,6 +68,17 @@ const UserHome = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      localStorage.removeItem('auth_token');
+      navigate('/login');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">Đang tải...</div>
@@ -76,7 +87,16 @@ const UserHome = () => {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-extrabold mb-4 text-gray-900">Trang cá nhân</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-extrabold text-gray-900">Trang cá nhân</h1>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+        >
+          <LogOut className="w-4 h-4" />
+          Đăng xuất
+        </button>
+      </div>
       <div className="mb-6 text-sm text-gray-500">Chào mừng trở lại — quản lý thông tin và đăng ký gói tập tại đây.</div>
 
       {homeInfo && (

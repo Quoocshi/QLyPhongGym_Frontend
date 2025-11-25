@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { authService } from '../services/api';
+import { authService, getRoleFromToken } from '../services/api';
 import { Dumbbell, ArrowLeft, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 
@@ -19,7 +19,16 @@ const Login = () => {
       const token = response.token || response.access_token; 
       if (token) {
         localStorage.setItem('auth_token', token);
-        navigate('/user/home'); 
+        // Decode token to get role and redirect accordingly
+        const role = getRoleFromToken(token);
+        if (role === 'trainer') {
+          navigate('/trainer/home');
+        } else if (role === 'user') {
+          navigate('/user/home');
+        } else {
+          // Fallback: default to user home
+          navigate('/user/home');
+        }
       } else {
          setError('Đăng nhập thất bại. Không nhận được token.');
       }
@@ -36,7 +45,15 @@ const Login = () => {
       const token = response.token || response.access_token;
       if (token) {
         localStorage.setItem('auth_token', token);
-        navigate('/user/home');
+        // Decode token to get role and redirect accordingly
+        const role = getRoleFromToken(token);
+        if (role === 'trainer') {
+          navigate('/trainer/home');
+        } else if (role === 'user') {
+          navigate('/user/home');
+        } else {
+          navigate('/user/home');
+        }
       }
     } catch (err) {
       setError('Đăng nhập Google thất bại. Vui lòng thử lại.');
