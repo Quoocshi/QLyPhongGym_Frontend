@@ -13,7 +13,7 @@ import TrainerHome from './pages/TrainerHome';
 
 // Replace with your actual Google Client ID from Google Cloud Console
 // You can also use environment variable: import.meta.env.VITE_GOOGLE_CLIENT_ID
-const GOOGLE_CLIENT_ID = "897272389729-2f6rr2n8cuplr42ku0p7h3qrrg8mccpd.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "399696688602-sn7nflbtp9omc6uvh032ssegtfdq0laq.apps.googleusercontent.com";
 
 function App() {
   return (

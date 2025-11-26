@@ -41,23 +41,48 @@ const Login = () => {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      const response = await authService.googleLogin(credentialResponse.credential);
-      const token = response.token || response.access_token;
+      setIsLoading(true);
+      setError('');
+      console.log('Google login with credential');
+      const credential = credentialResponse.credential;
+      
+      if (!credential) {
+        setError('Không nhận được credential từ Google');
+        setIsLoading(false);
+        return;
+      }
+
+      const authResponse = await authService.googleLogin(credential);
+      console.log('Google login response:', authResponse);
+      const token = authResponse.access_token; 
+      
       if (token) {
         localStorage.setItem('auth_token', token);
         // Decode token to get role and redirect accordingly
         const role = getRoleFromToken(token);
+        console.log('Role from token:', role);
         if (role === 'trainer') {
           navigate('/trainer/home');
         } else if (role === 'user') {
           navigate('/user/home');
         } else {
+          // Fallback: default to user home
           navigate('/user/home');
         }
+      } else {
+        setError('Đăng nhập Google thất bại. Không nhận được token.');
       }
     } catch (err) {
-      setError('Đăng nhập Google thất bại. Vui lòng thử lại.');
+      console.error('Google login error:', err);
+      setError(err.response?.data?.error || 'Đăng nhập Google thất bại. Vui lòng thử lại.');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleGoogleError = () => {
+    console.log('Google Login Failed');
+    setError('Đăng nhập Google thất bại');
   };
 
   return (
@@ -175,17 +200,14 @@ const Login = () => {
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-center transform hover:scale-105 transition-transform duration-300">
-                <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={() => {
-                        console.log('Login Failed');
-                        setError('Đăng nhập Google thất bại');
-                    }}
-                    shape="pill"
-                    size="large"
-                />
-              </div>
+            <div className="mt-6 flex justify-center transform hover:scale-105 transition-transform duration-300">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                shape="pill"
+                size="large"
+              />
+            </div>
             </div>
           </div>
           

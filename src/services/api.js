@@ -61,10 +61,9 @@ export const authService = {
         return response.data;
     },
     googleLogin: async (googleToken) => {
-        // Send Google ID Token to Laravel backend for verification
+        // Backend expects: { idToken }
         const response = await api.post('/auth/google', { 
-            token: googleToken,
-            provider: 'google'
+            idToken: googleToken
         });
         return response.data;
     },
