@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { paymentService } from '../services/api';
+import { paymentService } from '../services/paymentService.js';
 import { Loader2, ExternalLink, CreditCard } from 'lucide-react';
 import BackToUserHome from '../components/BackToUserHome';
 

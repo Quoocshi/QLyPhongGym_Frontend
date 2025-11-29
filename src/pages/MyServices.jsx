@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { dichVuGymService } from '../services/api';
+import { useMyServices } from '../contexts/MyServicesContext.jsx';
 import BackToUserHome from '../components/BackToUserHome';
 
 const dateFormatter = (iso) => {
@@ -22,34 +22,20 @@ const currency = (value) => {
 };
 
 const MyServices = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [data, setData] = useState(null);
+  const { services, loading, error, loadMyServices, getTotalSpent } = useMyServices();
 
   useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        setLoading(true);
-        const res = await dichVuGymService.getDichVuCuaToi();
-        if (mounted) setData(res);
-      } catch (e) {
-        setError(e.response?.data?.error || e.message || 'Lỗi khi tải dữ liệu');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    load();
-    return () => { mounted = false; };
+    loadMyServices();
   }, []);
 
   if (loading) return <div className="p-6">Đang tải...</div>;
   if (error) return <div className="p-6 text-red-600">Lỗi: {error}</div>;
 
-  const kh = data?.khachHang;
-  const ds = data?.dichVuDaDangKy || [];
-
-  const total = ds.reduce((s, it) => s + (Number(it.giaTien || it.gia || 0) || 0), 0);
+  const ds = services || [];
+  const total = getTotalSpent();
+  
+  // Mock customer info (can be retrieved from AuthContext if needed)
+  const kh = { maKH: 'KH001', hoTen: 'Khách hàng', email: 'customer@gym.vn' };
 
   return (
     <div className="space-y-6">

@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { authService } from '../services/api';
+import { authService } from '../services/authService.js';
+import { tokenService } from '../utils/tokenService.js';
 import { ArrowLeft, Check, X, Eye, EyeOff, Dumbbell, Sparkles, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 
@@ -34,7 +35,7 @@ const Register = () => {
     setIsLoading(true);
     setError('');
     try {
-      await authService.register({
+      const response = await authService.register({
         fullName: data.fullName,
         name: data.fullName,
         email: data.email,
@@ -45,8 +46,24 @@ const Register = () => {
         dob: formatDate(data.dob), // Convert to DD/MM/YYYY
         address: data.address
       });
-      navigate('/login');
+      
+      console.log('Registration successful:', response);
+      
+      // If registration returns token, auto-login
+      if (response.token || response.accessToken) {
+        const token = response.token || response.accessToken;
+        tokenService.setToken(token);
+        navigate('/user/home');
+      } else {
+        // Otherwise redirect to login page with success message
+        navigate('/login', { 
+          state: { 
+            message: response.message || 'Đăng ký thành công! Vui lòng đăng nhập.' 
+          } 
+        });
+      }
     } catch (err) {
+      console.error('Registration error:', err);
       setError(err.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);

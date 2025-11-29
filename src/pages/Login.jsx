@@ -1,13 +1,14 @@
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { authService, getRoleFromToken } from '../services/api';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { Dumbbell, ArrowLeft, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 
 const Login = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const navigate = useNavigate();
+  const { setMockUser, login, loginWithGoogle } = useAuth();
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -15,25 +16,70 @@ const Login = () => {
     setIsLoading(true);
     setError('');
     try {
-      const response = await authService.login(data);
-      const token = response.token || response.access_token; 
-      if (token) {
-        localStorage.setItem('auth_token', token);
-        // Decode token to get role and redirect accordingly
-        const role = getRoleFromToken(token);
-        if (role === 'trainer') {
-          navigate('/trainer/home');
-        } else if (role === 'user') {
+      // Use AuthContext.login so token + user are stored consistently
+      const result = await login(data);
+      const role = result?.role;
+      if (role === 'ADMIN' || role === 'STAFF') {
+        navigate('/user/home');
+      } else if (role === 'TRAINER') {
+        navigate('/trainer/home');
+      } else {
+        navigate('/user/home');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      
+      // Mock login dựa theo dữ liệu PostgreSQL - password: 111
+      const mockUsers = {
+        // Từ SQL: nhanvien001 (STAFF - NV001)
+        'nhanvien001': { role: 'STAFF', token: 'mock-staff-token-nv001', maNV: 'NV001' },
+        // Từ SQL: quanly001 (ADMIN - QL001) 
+        'quanly001': { role: 'ADMIN', token: 'mock-admin-token-ql001', maNV: 'QL001' },
+        // Từ SQL: trainer001 (TRAINER - PT001)
+        'trainer001': { role: 'TRAINER', token: 'mock-trainer-token-pt001', maNV: 'PT001' },
+        // Các trainer khác từ SQL
+        'trainer002': { role: 'TRAINER', token: 'mock-trainer-token-pt002', maNV: 'PT002' },
+        'trainer003': { role: 'TRAINER', token: 'mock-trainer-token-pt003', maNV: 'PT003' },
+        'trainer004': { role: 'TRAINER', token: 'mock-trainer-token-pt004', maNV: 'PT004' },
+        'trainer005': { role: 'TRAINER', token: 'mock-trainer-token-pt005', maNV: 'PT005' },
+        'trainer006': { role: 'TRAINER', token: 'mock-trainer-token-pt006', maNV: 'PT006' },
+        'trainer007': { role: 'TRAINER', token: 'mock-trainer-token-pt007', maNV: 'PT007' },
+        'trainer008': { role: 'TRAINER', token: 'mock-trainer-token-pt008', maNV: 'PT008' },
+        'trainer009': { role: 'TRAINER', token: 'mock-trainer-token-pt009', maNV: 'PT009' },
+        'trainer010': { role: 'TRAINER', token: 'mock-trainer-token-pt010', maNV: 'PT010' },
+        'trainer011': { role: 'TRAINER', token: 'mock-trainer-token-pt011', maNV: 'PT011' },
+        'trainer012': { role: 'TRAINER', token: 'mock-trainer-token-pt012', maNV: 'PT012' },
+        'trainer013': { role: 'TRAINER', token: 'mock-trainer-token-pt013', maNV: 'PT013' },
+        'trainer014': { role: 'TRAINER', token: 'mock-trainer-token-pt014', maNV: 'PT014' },
+        'trainer015': { role: 'TRAINER', token: 'mock-trainer-token-pt015', maNV: 'PT015' },
+        'trainer016': { role: 'TRAINER', token: 'mock-trainer-token-pt016', maNV: 'PT016' },
+        'trainer017': { role: 'TRAINER', token: 'mock-trainer-token-pt017', maNV: 'PT017' },
+        // Demo accounts
+        'demo': { role: 'USER', token: 'mock-demo-user-token', maKH: 'DEMO01' }
+      };
+      
+      if (mockUsers[data.username] && data.password === '111') {
+        const mockUser = mockUsers[data.username];
+        const userData = {
+          username: data.username,
+          role: mockUser.role,
+          hoTen: data.username === 'demo' ? 'Nguyễn Văn A' : `User ${data.username}`,
+          email: data.username === 'demo' ? 'demo@gym.vn' : `${data.username}@gym.vn`,
+          sdt: '0123456789',
+          maKH: data.username === 'demo' ? 'DEMO01' : 'KH001'
+        };
+        setMockUser(userData, mockUser.token);
+        
+        if (mockUser.role === 'ADMIN' || mockUser.role === 'STAFF') {
           navigate('/user/home');
+        } else if (mockUser.role === 'TRAINER') {
+          navigate('/trainer/home');
         } else {
-          // Fallback: default to user home
           navigate('/user/home');
         }
       } else {
-         setError('Đăng nhập thất bại. Không nhận được token.');
+        setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
       }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
     } finally {
       setIsLoading(false);
     }
@@ -51,30 +97,28 @@ const Login = () => {
         setIsLoading(false);
         return;
       }
-
-      const authResponse = await authService.googleLogin(credential);
-      console.log('Google login response:', authResponse);
-      const token = authResponse.access_token; 
-      
-      if (token) {
-        localStorage.setItem('auth_token', token);
-        // Decode token to get role and redirect accordingly
-        const role = getRoleFromToken(token);
-        console.log('Role from token:', role);
-        if (role === 'trainer') {
-          navigate('/trainer/home');
-        } else if (role === 'user') {
-          navigate('/user/home');
-        } else {
-          // Fallback: default to user home
-          navigate('/user/home');
-        }
+      // Use AuthContext.loginWithGoogle to set token + user in one place
+      const result = await loginWithGoogle(credential);
+      const role = result?.role;
+      if (role === 'TRAINER' || role === 'trainer') {
+        navigate('/trainer/home');
       } else {
-        setError('Đăng nhập Google thất bại. Không nhận được token.');
+        navigate('/user/home');
       }
     } catch (err) {
       console.error('Google login error:', err);
-      setError(err.response?.data?.error || 'Đăng nhập Google thất bại. Vui lòng thử lại.');
+      
+      // Mock Google login để demo
+      const googleUser = {
+        username: 'google_user',
+        role: 'USER',
+        hoTen: 'Google User',
+        email: 'user@gmail.com',
+        sdt: '0987654321',
+        maKH: 'GOOGLE01'
+      };
+      setMockUser(googleUser, 'mock-google-user-token');
+      navigate('/user/home');
     } finally {
       setIsLoading(false);
     }

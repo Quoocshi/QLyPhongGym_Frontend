@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { userService } from '../services/api';
+import { userService } from '../services/userService.js';
+import { authService } from '../services/authService.js';
 import { useNavigate } from 'react-router-dom';
 import { Calendar } from 'lucide-react';
 import BackToUserHome from '../components/BackToUserHome';
@@ -18,7 +19,7 @@ const UserSchedule = () => {
         setLichTap(res.danhSachLichTap || res);
       } catch (err) {
         if (err.response && err.response.status === 401) {
-          localStorage.removeItem('auth_token');
+          authService.logout();
           navigate('/login');
           return;
         }

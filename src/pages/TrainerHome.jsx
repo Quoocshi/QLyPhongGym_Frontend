@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { trainerService, authService } from '../services/api';
+import { trainerService } from '../services/trainerService.js';
+import { authService } from '../services/authService.js';
 import { useNavigate } from 'react-router-dom';
 import { Loader, AlertCircle, LogOut } from 'lucide-react';
 
@@ -36,7 +37,6 @@ const TrainerHome = () => {
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
-      localStorage.removeItem('auth_token');
       navigate('/login');
     }
   };

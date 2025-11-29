@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { invoiceService } from '../services/api';
+import { invoiceService } from '../services/invoiceService.js';
+import { useMyServices } from '../contexts/MyServicesContext.jsx';
 import { ArrowLeft, CreditCard } from 'lucide-react';
 import BackToUserHome from '../components/BackToUserHome';
 
 const PaymentStatus = () => {
   const { maHD } = useParams();
   const navigate = useNavigate();
+  const { addServices } = useMyServices();
   const [hoaDon, setHoaDon] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [servicesAdded, setServicesAdded] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -19,6 +22,25 @@ const PaymentStatus = () => {
         if (!mounted) return;
         setHoaDon(res);
         setError('');
+        
+        // Check if payment is successful and services haven't been added yet
+        const statusText = res.trangThai || res.status || 'unknown';
+        const paid = String(statusText).toLowerCase().includes('thanh') || String(statusText).toLowerCase().includes('paid');
+        
+        if (paid && !servicesAdded && res.dsChiTiet && res.dsChiTiet.length > 0) {
+          // Add services to MyServicesContext
+          const servicesToAdd = res.dsChiTiet.map(ct => ({
+            maDV: ct.maDV || ct.dichVuMa || `DV_${Date.now()}`,
+            tenDV: ct.tenDV || ct.dichVuTen || 'Dịch vụ',
+            gia: ct.donGia || ct.price || 0,
+            trangThai: 'active',
+            ngayDangKy: new Date().toISOString().split('T')[0],
+            boMon: 'N/A'
+          }));
+          
+          addServices(servicesToAdd);
+          setServicesAdded(true);
+        }
       } catch (err) {
         setError(err.response?.data || err.message || 'Lỗi khi lấy thông tin hóa đơn');
       } finally {
@@ -32,7 +54,7 @@ const PaymentStatus = () => {
     // poll every 3s to detect payment completion
     const id = setInterval(fetchStatus, 3000);
     return () => { mounted = false; clearInterval(id); };
-  }, [maHD]);
+  }, [maHD, servicesAdded, addServices]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Đang kiểm tra trạng thái thanh toán...</div>;
 
