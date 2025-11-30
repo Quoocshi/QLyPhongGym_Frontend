@@ -93,39 +93,41 @@ const RegisterService = () => {
     }
   };
 
-  const handleRegister = async () => {
-    if (!khachHang) {
-      setError('Không có thông tin khách hàng');
-      return;
-    }
-    if (selectedDV.length === 0) {
-      setError('Vui lòng chọn ít nhất một dịch vụ');
-      return;
-    }
+ const handleRegister = async () => {
+  if (!khachHang) {
+    setError('Không có thông tin khách hàng');
+    return;
+  }
+  if (selectedDV.length === 0) {
+    setError('Vui lòng chọn ít nhất một dịch vụ');
+    return;
+  }
 
-    const payload = {
-      accountId: accountId ? Number(accountId) : (Number(khachHang?.accountId) || undefined),
-      maKH: khachHang?.maKH,
-      dsMaDV: selectedDV,
-      dsTrainerId: Object.values(selectedTrainerByDV).filter(Boolean),
-      dsClassId: Object.values(selectedClassByDV).filter(Boolean)
-    };
-
-    try {
-      setSubmitting(true);
-      const res = await dichVuGymService.dangKyDichVuUniversal(payload);
-      if (res.maHD) {
-        // navigate to payment flow
-        navigate(`/payment/${res.maHD}`);
-      } else {
-        setError(res.error || 'Đăng ký thất bại');
-      }
-    } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Lỗi khi đăng ký dịch vụ');
-    } finally {
-      setSubmitting(false);
-    }
+  const payload = {
+    accountId: accountId ? Number(accountId) : Number(khachHang?.accountId),
+    maKH: khachHang?.maKH,
+    dsMaDV: selectedDV,
+    dsTrainerId: Object.values(selectedTrainerByDV).filter(Boolean),
+    dsClassId: Object.values(selectedClassByDV).filter(Boolean)
   };
+
+  try {
+    setSubmitting(true);
+    const res = await dichVuGymService.dangKyDichVuUniversal(payload);
+
+    if (res.maHD) {
+      // điều hướng tới trang thanh toán
+      navigate(`/payment/${res.maHD}`);
+    } else {
+      setError(res.error || 'Đăng ký thất bại, dữ liệu trả về không hợp lệ');
+    }
+  } catch (err) {
+    setError(err?.response?.data?.error || err.message || 'Lỗi khi đăng ký dịch vụ');
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Đang tải...</div>;
 

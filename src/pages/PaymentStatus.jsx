@@ -1,79 +1,71 @@
+// src/pages/PaymentStatus.jsx
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { invoiceService } from '../services/api';
-import { ArrowLeft, CreditCard } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import BackToUserHome from '../components/BackToUserHome';
 
 const PaymentStatus = () => {
   const { maHD } = useParams();
-  const navigate = useNavigate();
-  const [hoaDon, setHoaDon] = useState(null);
+  //const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+const [hoaDon, setHoaDon] = useState(null);
+const [hoTen, setHoTen] = useState(''); // thêm state cho tên khách hàng
 
-  useEffect(() => {
-    let mounted = true;
-    const fetchStatus = async () => {
-      try {
-        const res = await invoiceService.getHoaDon(maHD);
-        if (!mounted) return;
-        setHoaDon(res);
-        setError('');
-      } catch (err) {
-        setError(err.response?.data || err.message || 'Lỗi khi lấy thông tin hóa đơn');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
+useEffect(() => {
+  const fetchInvoice = async () => {
+    try {
+      setLoading(true);
+      const res = await invoiceService.getHoaDon(maHD);
+      console.log('Invoice API response:', res); // kiểm tra
+      setHoaDon(res.hoaDon); // phần hóa đơn
+      setHoTen(res.hoTen);   // tên khách hàng
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchInvoice();
+}, [maHD]);
 
-    // initial fetch
-    fetchStatus();
 
-    // poll every 3s to detect payment completion
-    const id = setInterval(fetchStatus, 3000);
-    return () => { mounted = false; clearInterval(id); };
-  }, [maHD]);
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Đang kiểm tra trạng thái thanh toán...</div>;
-
-  if (error) return <div className="p-6 text-red-600">{error}</div>;
-
-  if (!hoaDon) return <div className="p-6">Không tìm thấy hóa đơn.</div>;
-
-  const statusText = hoaDon.trangThai || hoaDon.status || 'unknown';
-  const paid = String(statusText).toLowerCase().includes('thanh') || String(statusText).toLowerCase().includes('paid');
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="flex items-center gap-3">
+        <CheckCircle2 className="animate-spin w-6 h-6 text-green-600"/>
+        <span>Đang tải thông tin hóa đơn…</span>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="p-6 max-w-3xl mx-auto bg-white rounded shadow">
-      <BackToUserHome className="mb-4" />
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 rounded hover:bg-gray-100"><ArrowLeft className="w-4 h-4"/></button>
-          <h1 className="text-2xl font-bold">Hóa đơn: {hoaDon.maHD || maHD}</h1>
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="w-full max-w-lg bg-white rounded shadow p-6 text-center">
+        <div className="flex items-center justify-center mb-4">
+          <div className="p-3 rounded-full bg-green-50 text-green-600">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
         </div>
-        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded ${paid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-          <CreditCard className="w-4 h-4"/>
-          <span className="font-medium">{statusText}</span>
-        </div>
+
+        <h2 className="text-xl font-semibold mb-2">Thanh toán thành công!</h2>
+        <p className="text-sm text-gray-600 mb-2">Mã hóa đơn: {hoaDon?.maHD}</p>
+        <p className="text-sm text-gray-600 mb-2">Tổng tiền: {hoaDon?.tongTien}</p>
+        <p className="text-sm text-gray-600 mb-2">Trạng thái: {hoaDon?.trangThai}</p>
+        <p className="text-sm text-gray-600 mb-2">Ngày thanh toán:  {hoaDon?.ngayTT}</p>
+        <p className="text-sm text-gray-600 mb-2">Khách hàng:  {hoTen}</p>
+
+
+
+        {/* <button
+          onClick={() => navigate('/dang-ky-goi-tap')}
+          className="px-4 py-2 rounded border bg-green-100 text-green-800"
+        >
+          Quay về đăng ký gói tập
+        </button> */}
+
+        <BackToUserHome className="mt-4" />
       </div>
-
-      <div className="mb-3"><strong>Tổng tiền:</strong> <span className="font-semibold">{hoaDon.tongTien}</span></div>
-
-      <h2 className="text-lg font-semibold mt-4 mb-2">Chi tiết</h2>
-      {Array.isArray(hoaDon.dsChiTiet) && hoaDon.dsChiTiet.length > 0 ? (
-        <ul className="space-y-2">
-          {hoaDon.dsChiTiet.map((ct, idx) => (
-            <li key={ct.id || idx} className="border rounded p-2 bg-gray-50">
-              <div className="flex justify-between">
-                <div><strong>Mã DV:</strong> {ct.maDV || ct.dichVuMa || '-'}</div>
-                <div><strong>Giá:</strong> {ct.donGia || ct.price || '-'}</div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div>Không có chi tiết hóa đơn hiển thị.</div>
-      )}
     </div>
   );
 };
