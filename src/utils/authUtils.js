@@ -21,29 +21,19 @@ export function parseJwt(token) {
 export function getRoleFromToken(token) {
     if (!token) return null;
     
-    // Handle mock tokens (they start with 'mock-token-')
-    if (token.startsWith('mock-token-')) {
-        return 'user'; // Default mock role
-    }
-    
     const payload = parseJwt(token);
     if (!payload) return null;
     
-    // Check various role field names that backend might use
-    const roleValue = payload.role || payload.roles || payload.loaiNguoiDung || payload.maLoaiNguoiDung || payload.type;
+    // Backend JWT structure: { roles: ["USER"], sub: "username", accountId: 1, ... }
+    const roles = payload.roles || payload.role || [];
     
-    if (!roleValue) return null;
-    
-    const roleStr = String(roleValue).toLowerCase();
-    
-    // Check for trainer keywords
-    if (roleStr.includes('trainer') || roleStr.includes('pt') || roleStr === '2') {
-        return 'trainer';
-    }
-    // Check for user keywords
-    if (roleStr.includes('user') || roleStr.includes('khach') || roleStr === '1') {
-        return 'user';
+    if (Array.isArray(roles) && roles.length > 0) {
+        return roles[0]; // Return first role: "USER", "TRAINER", "ADMIN", "STAFF"
     }
     
-    return null;
+    if (typeof roles === 'string') {
+        return roles;
+    }
+    
+    return 'USER'; // Default role
 }

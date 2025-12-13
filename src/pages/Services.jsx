@@ -1,170 +1,263 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCart } from '../contexts/CartContext.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { dichVuService } from '../services/dichVuService.js';
-import { useNavigate } from 'react-router-dom';
-import { Sparkles, TrendingUp, Dumbbell, Award, Users, Clock, Search, Star, Filter, Grid, List, Heart, Share2, ArrowRight, ShoppingCart, Plus } from 'lucide-react';
-import { FullPageLoader } from '../components/ui/LoadingSpinner';
+import { useNavigate, useLocation } from 'react-router-dom';
+import {
+  Sparkles,
+  Clock,
+  Search,
+  Star,
+  Filter,
+  Grid,
+  List,
+  Heart,
+  ArrowRight,
+  ShoppingCart,
+  Plus,
+} from 'lucide-react';
 import { FullPageError } from '../components/ui/ErrorMessage';
 import Header from '../components/common/Header.jsx';
 import ReusableFooter from '../components/common/ReusableFooter.jsx';
 
 const Services = () => {
   const navigate = useNavigate();
-  const [services, setServices] = useState([]);
-  const [filteredServices, setFilteredServices] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
+
+  const { items: cart = [], addToCart, removeFromCart, updateQuantity, getCartTotal, getItemCount } = useCart();
+
+  const [boMonList, setBoMonList] = useState([]);
+  const [selectedBoMon, setSelectedBoMon] = useState(null);
+
+  const [dichVuList, setDichVuList] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [priceRange, setPriceRange] = useState('ALL');
   const [sortBy, setSortBy] = useState('popularity');
   const [viewMode, setViewMode] = useState('grid');
-  const [searchTerm, setSearchTerm] = useState('');
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [favorites, setFavorites] = useState(new Set());
-  const { items: cart, addToCart, removeFromCart, updateQuantity, getCartTotal, getItemCount } = useCart();
   const [showCartSidebar, setShowCartSidebar] = useState(false);
 
-  // Mock data từ PostgreSQL database - đầy đủ 48 dịch vụ
-  const mockData = [
-    // BM01 – GYM (TuDo, PT)
-    { maDV: 'DV01', tenDV: 'GYM TuDo 7N', loaiDV: 'TuDo', thoiHan: 7, donGia: 300000, maBM: 'BM01', tenBM: 'Gym Fitness' },
-    { maDV: 'DV02', tenDV: 'GYM TuDo 30N', loaiDV: 'TuDo', thoiHan: 30, donGia: 1000000, maBM: 'BM01', tenBM: 'Gym Fitness' },
-    { maDV: 'DV03', tenDV: 'GYM TuDo 90N', loaiDV: 'TuDo', thoiHan: 90, donGia: 2700000, maBM: 'BM01', tenBM: 'Gym Fitness' },
-    { maDV: 'DV04', tenDV: 'GYM TuDo 365N', loaiDV: 'TuDo', thoiHan: 365, donGia: 9000000, maBM: 'BM01', tenBM: 'Gym Fitness' },
-    { maDV: 'DV05', tenDV: 'GYM PT 7N', loaiDV: 'PT', thoiHan: 7, donGia: 800000, maBM: 'BM01', tenBM: 'Gym Fitness' },
-    { maDV: 'DV06', tenDV: 'GYM PT 30N', loaiDV: 'PT', thoiHan: 30, donGia: 2500000, maBM: 'BM01', tenBM: 'Gym Fitness' },
-    { maDV: 'DV07', tenDV: 'GYM PT 90N', loaiDV: 'PT', thoiHan: 90, donGia: 6500000, maBM: 'BM01', tenBM: 'Gym Fitness' },
-    { maDV: 'DV08', tenDV: 'GYM PT 365N', loaiDV: 'PT', thoiHan: 365, donGia: 20000000, maBM: 'BM01', tenBM: 'Gym Fitness' },
-
-    // BM02 – YOGA (TuDo, Lop)
-    { maDV: 'DV09', tenDV: 'YOGA TuDo 7N', loaiDV: 'TuDo', thoiHan: 7, donGia: 300000, maBM: 'BM02', tenBM: 'Yoga' },
-    { maDV: 'DV10', tenDV: 'YOGA TuDo 30N', loaiDV: 'TuDo', thoiHan: 30, donGia: 1000000, maBM: 'BM02', tenBM: 'Yoga' },
-    { maDV: 'DV11', tenDV: 'YOGA TuDo 90N', loaiDV: 'TuDo', thoiHan: 90, donGia: 2700000, maBM: 'BM02', tenBM: 'Yoga' },
-    { maDV: 'DV12', tenDV: 'YOGA TuDo 365N', loaiDV: 'TuDo', thoiHan: 365, donGia: 9000000, maBM: 'BM02', tenBM: 'Yoga' },
-    { maDV: 'DV13', tenDV: 'YOGA Lop 7N', loaiDV: 'Lop', thoiHan: 7, donGia: 400000, maBM: 'BM02', tenBM: 'Yoga' },
-    { maDV: 'DV14', tenDV: 'YOGA Lop 30N', loaiDV: 'Lop', thoiHan: 30, donGia: 1300000, maBM: 'BM02', tenBM: 'Yoga' },
-    { maDV: 'DV15', tenDV: 'YOGA Lop 90N', loaiDV: 'Lop', thoiHan: 90, donGia: 3500000, maBM: 'BM02', tenBM: 'Yoga' },
-    { maDV: 'DV16', tenDV: 'YOGA Lop 365N', loaiDV: 'Lop', thoiHan: 365, donGia: 10000000, maBM: 'BM02', tenBM: 'Yoga' },
-
-    // BM03 – ZUMBA (TuDo, Lop)
-    { maDV: 'DV17', tenDV: 'ZUMBA TuDo 7N', loaiDV: 'TuDo', thoiHan: 7, donGia: 300000, maBM: 'BM03', tenBM: 'Zumba' },
-    { maDV: 'DV18', tenDV: 'ZUMBA TuDo 30N', loaiDV: 'TuDo', thoiHan: 30, donGia: 1000000, maBM: 'BM03', tenBM: 'Zumba' },
-    { maDV: 'DV19', tenDV: 'ZUMBA TuDo 90N', loaiDV: 'TuDo', thoiHan: 90, donGia: 2700000, maBM: 'BM03', tenBM: 'Zumba' },
-    { maDV: 'DV20', tenDV: 'ZUMBA TuDo 365N', loaiDV: 'TuDo', thoiHan: 365, donGia: 9000000, maBM: 'BM03', tenBM: 'Zumba' },
-    { maDV: 'DV21', tenDV: 'ZUMBA Lop 7N', loaiDV: 'Lop', thoiHan: 7, donGia: 400000, maBM: 'BM03', tenBM: 'Zumba' },
-    { maDV: 'DV22', tenDV: 'ZUMBA Lop 30N', loaiDV: 'Lop', thoiHan: 30, donGia: 1300000, maBM: 'BM03', tenBM: 'Zumba' },
-    { maDV: 'DV23', tenDV: 'ZUMBA Lop 90N', loaiDV: 'Lop', thoiHan: 90, donGia: 3500000, maBM: 'BM03', tenBM: 'Zumba' },
-    { maDV: 'DV24', tenDV: 'ZUMBA Lop 365N', loaiDV: 'Lop', thoiHan: 365, donGia: 10000000, maBM: 'BM03', tenBM: 'Zumba' },
-
-    // BM04 – CARDIO (TuDo, PT)
-    { maDV: 'DV25', tenDV: 'CARDIO TuDo 7N', loaiDV: 'TuDo', thoiHan: 7, donGia: 300000, maBM: 'BM04', tenBM: 'Cardio' },
-    { maDV: 'DV26', tenDV: 'CARDIO TuDo 30N', loaiDV: 'TuDo', thoiHan: 30, donGia: 1000000, maBM: 'BM04', tenBM: 'Cardio' },
-    { maDV: 'DV27', tenDV: 'CARDIO TuDo 90N', loaiDV: 'TuDo', thoiHan: 90, donGia: 2700000, maBM: 'BM04', tenBM: 'Cardio' },
-    { maDV: 'DV28', tenDV: 'CARDIO TuDo 365N', loaiDV: 'TuDo', thoiHan: 365, donGia: 9000000, maBM: 'BM04', tenBM: 'Cardio' },
-    { maDV: 'DV29', tenDV: 'CARDIO PT 7N', loaiDV: 'PT', thoiHan: 7, donGia: 800000, maBM: 'BM04', tenBM: 'Cardio' },
-    { maDV: 'DV30', tenDV: 'CARDIO PT 30N', loaiDV: 'PT', thoiHan: 30, donGia: 2500000, maBM: 'BM04', tenBM: 'Cardio' },
-    { maDV: 'DV31', tenDV: 'CARDIO PT 90N', loaiDV: 'PT', thoiHan: 90, donGia: 6500000, maBM: 'BM04', tenBM: 'Cardio' },
-    { maDV: 'DV32', tenDV: 'CARDIO PT 365N', loaiDV: 'PT', thoiHan: 365, donGia: 20000000, maBM: 'BM04', tenBM: 'Cardio' },
-
-    // BM05 – BƠI (TuDo, Lop)
-    { maDV: 'DV33', tenDV: 'BOI TuDo 7N', loaiDV: 'TuDo', thoiHan: 7, donGia: 300000, maBM: 'BM05', tenBM: 'Boi' },
-    { maDV: 'DV34', tenDV: 'BOI TuDo 30N', loaiDV: 'TuDo', thoiHan: 30, donGia: 1000000, maBM: 'BM05', tenBM: 'Boi' },
-    { maDV: 'DV35', tenDV: 'BOI TuDo 90N', loaiDV: 'TuDo', thoiHan: 90, donGia: 2700000, maBM: 'BM05', tenBM: 'Boi' },
-    { maDV: 'DV36', tenDV: 'BOI TuDo 365N', loaiDV: 'TuDo', thoiHan: 365, donGia: 9000000, maBM: 'BM05', tenBM: 'Boi' },
-    { maDV: 'DV37', tenDV: 'BOI Lop 7N', loaiDV: 'Lop', thoiHan: 7, donGia: 400000, maBM: 'BM05', tenBM: 'Boi' },
-    { maDV: 'DV38', tenDV: 'BOI Lop 30N', loaiDV: 'Lop', thoiHan: 30, donGia: 1300000, maBM: 'BM05', tenBM: 'Boi' },
-    { maDV: 'DV39', tenDV: 'BOI Lop 90N', loaiDV: 'Lop', thoiHan: 90, donGia: 3500000, maBM: 'BM05', tenBM: 'Boi' },
-    { maDV: 'DV40', tenDV: 'BOI Lop 365N', loaiDV: 'Lop', thoiHan: 365, donGia: 10000000, maBM: 'BM05', tenBM: 'Boi' },
-
-    // BM06 – CROSSFIT (TuDo, PT)
-    { maDV: 'DV41', tenDV: 'CROSSFIT TuDo 7N', loaiDV: 'TuDo', thoiHan: 7, donGia: 300000, maBM: 'BM06', tenBM: 'Crossfit' },
-    { maDV: 'DV42', tenDV: 'CROSSFIT TuDo 30N', loaiDV: 'TuDo', thoiHan: 30, donGia: 1000000, maBM: 'BM06', tenBM: 'Crossfit' },
-    { maDV: 'DV43', tenDV: 'CROSSFIT TuDo 90N', loaiDV: 'TuDo', thoiHan: 90, donGia: 2700000, maBM: 'BM06', tenBM: 'Crossfit' },
-    { maDV: 'DV44', tenDV: 'CROSSFIT TuDo 365N', loaiDV: 'TuDo', thoiHan: 365, donGia: 9000000, maBM: 'BM06', tenBM: 'Crossfit' },
-    { maDV: 'DV45', tenDV: 'CROSSFIT PT 7N', loaiDV: 'PT', thoiHan: 7, donGia: 800000, maBM: 'BM06', tenBM: 'Crossfit' },
-    { maDV: 'DV46', tenDV: 'CROSSFIT PT 30N', loaiDV: 'PT', thoiHan: 30, donGia: 2500000, maBM: 'BM06', tenBM: 'Crossfit' },
-    { maDV: 'DV47', tenDV: 'CROSSFIT PT 90N', loaiDV: 'PT', thoiHan: 90, donGia: 6500000, maBM: 'BM06', tenBM: 'Crossfit' },
-    { maDV: 'DV48', tenDV: 'CROSSFIT PT 365N', loaiDV: 'PT', thoiHan: 365, donGia: 20000000, maBM: 'BM06', tenBM: 'Crossfit' }
-  ];
-
-  const categories = [
-    { value: 'ALL', label: 'Tất cả dịch vụ', icon: '🏃‍♂️' },
-    { value: 'Gym Fitness', label: 'Tập gym', icon: '💪' },
-    { value: 'Yoga', label: 'Yoga', icon: '🧘‍♀️' },
-    { value: 'Cardio', label: 'Cardio', icon: '❤️' },
-    { value: 'Zumba', label: 'Zumba', icon: '💃' },
-    { value: 'Boi', label: 'Bơi lội', icon: '🏊‍♀️' },
-    { value: 'Crossfit', label: 'CrossFit', icon: '🏋️‍♀️' },
-  ];
-
-  const priceRanges = [
-    { value: 'ALL', label: 'Tất cả mức giá' },
-    { value: '0-500000', label: 'Dưới 500,000đ' },
-    { value: '500000-1000000', label: '500,000 - 1,000,000đ' },
-    { value: '1000000-2000000', label: '1,000,000 - 2,000,000đ' },
-    { value: '2000000+', label: 'Trên 2,000,000đ' },
-  ];
+  const priceRanges = useMemo(
+    () => [
+      { value: 'ALL', label: 'Tất cả mức giá' },
+      { value: '0-500000', label: 'Dưới 500,000đ' },
+      { value: '500000-1000000', label: '500,000 - 1,000,000đ' },
+      { value: '1000000-2000000', label: '1,000,000 - 2,000,000đ' },
+      { value: '2000000+', label: 'Trên 2,000,000đ' },
+    ],
+    []
+  );
 
   useEffect(() => {
     fetchServices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    filterServices();
-  }, [services, searchTerm, selectedCategory, priceRange, sortBy]);
+  const formatPrice = (price) => {
+    const safe = Number(price || 0);
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(safe);
+  };
+
+  const getCategoryIcon = (tenBM) => {
+    const iconMap = {
+      'Gym Fitness': '💪',
+      Yoga: '🧘‍♀️',
+      Cardio: '❤️',
+      Zumba: '💃',
+      Boi: '🏊‍♀️',
+      Crossfit: '🏋️‍♀️',
+    };
+    return iconMap[tenBM] || '🏃‍♂️';
+  };
+
+  const getServiceTypeLabel = (loaiDV) => {
+    const labels = {
+      TuDo: 'Tự do',
+      Lop: 'Lớp học',
+      PT: 'Personal Training',
+    };
+    return labels[loaiDV] || loaiDV || '—';
+  };
+
+  const getServiceTypeColor = (loaiDV) => {
+    const colors = {
+      TuDo: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+      Lop: 'bg-blue-100 text-blue-800 border-blue-200',
+      PT: 'bg-purple-100 text-purple-800 border-purple-200',
+    };
+    return colors[loaiDV] || 'bg-gray-100 text-gray-800 border-gray-200';
+  };
+
+  // (Giữ mapping ảnh theo maDV như bạn đang dùng)
+  const getCategoryImage = (service) => {
+    const imageMap = {
+      DV01: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV02: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV03: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV04: 'https://images.unsplash.com/photo-1583500178690-f7d24f6bd16c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+
+      DV05: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV06: 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV07: 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV08: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+
+      DV09: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV10: 'https://images.unsplash.com/photo-1506629905607-44812b8f7e0d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV11: 'https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV12: 'https://images.unsplash.com/photo-1545389336-cf090694435e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+
+      DV13: 'https://images.unsplash.com/photo-1593811167562-9cef47bfc4a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV14: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV15: 'https://images.unsplash.com/photo-1588286840104-8957b019727f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV16: 'https://images.unsplash.com/photo-1552196563-55cd4e45efb3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+
+      DV17: 'https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV18: 'https://images.unsplash.com/photo-1571266028243-d220c9c18cd3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV19: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV20: 'https://images.unsplash.com/photo-1550259979-ed79b48d2a30?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+
+      DV21: 'https://images.unsplash.com/photo-1571266028243-d220c9c18cd3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV22: 'https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV23: 'https://images.unsplash.com/photo-1578766556744-4d978f0de15f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV24: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+
+      DV25: 'https://images.unsplash.com/photo-1571019614081-0f8e6e4b2ca2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV26: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV27: 'https://images.unsplash.com/photo-1485727749690-d091e8284ef3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV28: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+
+      DV29: 'https://images.unsplash.com/photo-1571019614332-74ec4e351994?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV30: 'https://images.unsplash.com/photo-1549576490-b0b4831ef60a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV31: 'https://images.unsplash.com/photo-1566241440091-ec10de8db2e1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV32: 'https://images.unsplash.com/photo-1517963628607-235ccdd5476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+
+      DV33: 'https://images.unsplash.com/photo-1530549387789-4c1017266635?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV34: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV35: 'https://images.unsplash.com/photo-1530143808100-583d5ff08862?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV36: 'https://images.unsplash.com/photo-1571019614332-74ec4e351994?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+
+      DV37: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV38: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV39: 'https://images.unsplash.com/photo-1530549387789-4c1017266635?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV40: 'https://images.unsplash.com/photo-1530143808100-583d5ff08862?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+
+      DV41: 'https://images.unsplash.com/photo-1517963628607-235ccdd5476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV42: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV43: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV44: 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+
+      DV45: 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV46: 'https://images.unsplash.com/photo-1566241440091-ec10de8db2e1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV47: 'https://images.unsplash.com/photo-1583500178690-f7d24f6bd16c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      DV48: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    };
+
+    return (
+      imageMap[service?.maDV] ||
+      'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+    );
+  };
+
+  const handleAuthErrorIfNeeded = (err) => {
+    const status = err?.response?.status;
+    if (status === 401 || status === 403) {
+      navigate('/login', { state: { from: location } });
+      return true;
+    }
+    return false;
+  };
 
   const fetchServices = async () => {
     try {
       setLoading(true);
-      // Thử gọi API backend trước
-      try {
-        console.log('🔄 Đang gọi API backend...');
-        const data = await dichVuService.getDanhSachDichVu();
-        console.log('✅ API Response received:', data);
-        
-        if (data && data.length > 0) {
-          setServices(data);
-          console.log('✅ Sử dụng dữ liệu từ backend');
-        } else {
-          throw new Error('API trả về dữ liệu rỗng');
-        }
-        setError('');
-      } catch (apiError) {
-        console.warn('⚠️ API không khả dụng, sử dụng mock data:', apiError.message);
-        // Fallback to mock data nếu API fail
-        setServices(mockData);
-        console.log('📋 Sử dụng mock data làm fallback');
-        setError('');
-      }
-    } catch (err) {
-      console.error('❌ Lỗi tổng thể:', err);
-      // Final fallback
-      setServices(mockData);
       setError('');
+
+      // 1) Lấy dsBoMon + khachHang
+      const response = await dichVuService.getDangKyDichVu();
+
+      if (!response?.dsBoMon || response.dsBoMon.length === 0) {
+        setBoMonList([]);
+        setSelectedBoMon(null);
+        setDichVuList([]);
+        setError('Không có bộ môn/dịch vụ nào.');
+        return;
+      }
+
+      setBoMonList(response.dsBoMon);
+
+      // 2) Mặc định chọn bộ môn đầu tiên và load dịch vụ theo bộ môn (API này lọc theo khách hàng chưa đăng ký)
+      const first = response.dsBoMon[0];
+      setSelectedBoMon(first);
+      await loadDichVuTheoBoMon(first.maBM);
+    } catch (err) {
+      console.error('❌ Lỗi khi tải dữ liệu:', err);
+
+      if (handleAuthErrorIfNeeded(err)) return;
+
+      setBoMonList([]);
+      setSelectedBoMon(null);
+      setDichVuList([]);
+      setError('Không thể tải danh sách dịch vụ. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
   };
 
-  const filterServices = () => {
-    let filtered = [...services];
+  const loadDichVuTheoBoMon = async (maBM) => {
+    try {
+      setError('');
 
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(service =>
-        service.tenDV.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (service.tenBM && service.tenBM.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      const response = await dichVuService.getDichVuTheoBoMon(maBM);
+
+      const boMon = response?.boMon;
+      const tenBM = boMon?.tenBM || selectedBoMon?.tenBM || '';
+
+      const list = (boMon?.danhSachDichVu || []).map((s) => ({
+        ...s,
+        tenBM,
+        maBM,
+      }));
+
+      setDichVuList(list);
+    } catch (err) {
+      console.error('Error loading services by department:', err);
+
+      if (handleAuthErrorIfNeeded(err)) return;
+
+      setDichVuList([]);
+      setError('Lỗi khi tải dịch vụ theo bộ môn.');
+    }
+  };
+
+  const handleBoMonSelect = async (boMon) => {
+    setSelectedBoMon(boMon);
+    await loadDichVuTheoBoMon(boMon.maBM);
+  };
+
+  const filteredServices = useMemo(() => {
+    let filtered = [...dichVuList];
+
+    // search
+    if (searchTerm.trim()) {
+      const kw = searchTerm.trim().toLowerCase();
+      filtered = filtered.filter((s) => {
+        const tenDV = (s.tenDV || '').toLowerCase();
+        const tenBM = (s.tenBM || '').toLowerCase();
+        return tenDV.includes(kw) || tenBM.includes(kw);
+      });
     }
 
-    // Filter by category
-    if (selectedCategory !== 'ALL') {
-      filtered = filtered.filter(service => service.tenBM === selectedCategory);
-    }
-
-    // Filter by price range
+    // price range
     if (priceRange !== 'ALL') {
-      filtered = filtered.filter(service => {
-        const price = service.donGia;
+      filtered = filtered.filter((s) => {
+        const price = Number(s.donGia || 0);
         switch (priceRange) {
           case '0-500000':
             return price < 500000;
@@ -180,149 +273,36 @@ const Services = () => {
       });
     }
 
-    // Sort services
+    // sort
     switch (sortBy) {
       case 'price-low':
-        filtered.sort((a, b) => a.donGia - b.donGia);
+        filtered.sort((a, b) => Number(a.donGia || 0) - Number(b.donGia || 0));
         break;
       case 'price-high':
-        filtered.sort((a, b) => b.donGia - a.donGia);
+        filtered.sort((a, b) => Number(b.donGia || 0) - Number(a.donGia || 0));
         break;
       case 'duration':
-        filtered.sort((a, b) => a.thoiHan - b.thoiHan);
+        filtered.sort((a, b) => (a.thoiHan ?? 999999) - (b.thoiHan ?? 999999));
         break;
       case 'name':
-        filtered.sort((a, b) => a.tenDV.localeCompare(b.tenDV));
+        filtered.sort((a, b) => (a.tenDV || '').localeCompare(b.tenDV || ''));
         break;
       default:
-        // popularity - keep original order
+        // popularity: giữ nguyên
         break;
     }
 
-    setFilteredServices(filtered);
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(price);
-  };
-
-  // Cart functionality handled by CartContext
+    return filtered;
+  }, [dichVuList, searchTerm, priceRange, sortBy]);
 
   const proceedToCheckout = () => {
     if (!cart || cart.length === 0) return;
-    navigate('/register-service', { state: { cartItems: cart } });
-  };
 
-  const getCategoryIcon = (tenBM) => {
-    const iconMap = {
-      'Gym Fitness': '💪',
-      'Yoga': '🧘‍♀️',
-      'Cardio': '❤️',
-      'Zumba': '💃',
-      'Boi': '🏊‍♀️',
-      'Crossfit': '🏋️‍♀️'
-    };
-    return iconMap[tenBM] || '🏃‍♂️';
-  };
-
-  const getCategoryImage = (service) => {
-    // Mỗi loại dịch vụ cụ thể có một hình ảnh riêng
-    const imageMap = {
-      // GYM Fitness - TuDo
-      'DV01': 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Gym equipment
-      'DV02': 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Gym workout
-      'DV03': 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Weight training
-      'DV04': 'https://images.unsplash.com/photo-1583500178690-f7d24f6bd16c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Gym interior
-      
-      // GYM Fitness - PT
-      'DV05': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Personal training
-      'DV06': 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // PT session
-      'DV07': 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Trainer helping
-      'DV08': 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Premium PT
-      
-      // YOGA - TuDo
-      'DV09': 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Yoga mat
-      'DV10': 'https://images.unsplash.com/photo-1506629905607-44812b8f7e0d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Yoga pose
-      'DV11': 'https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Yoga meditation
-      'DV12': 'https://images.unsplash.com/photo-1545389336-cf090694435e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Yoga studio
-      
-      // YOGA - Lop
-      'DV13': 'https://images.unsplash.com/photo-1593811167562-9cef47bfc4a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Yoga class
-      'DV14': 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Group yoga
-      'DV15': 'https://images.unsplash.com/photo-1588286840104-8957b019727f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Yoga instructor
-      'DV16': 'https://images.unsplash.com/photo-1552196563-55cd4e45efb3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Advanced yoga
-      
-      // ZUMBA - TuDo
-      'DV17': 'https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Dance fitness
-      'DV18': 'https://images.unsplash.com/photo-1571266028243-d220c9c18cd3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Zumba energy
-      'DV19': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Dance movement
-      'DV20': 'https://images.unsplash.com/photo-1550259979-ed79b48d2a30?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Zumba fun
-      
-      // ZUMBA - Lop
-      'DV21': 'https://images.unsplash.com/photo-1571266028243-d220c9c18cd3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Zumba class
-      'DV22': 'https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Group dance
-      'DV23': 'https://images.unsplash.com/photo-1578766556744-4d978f0de15f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Dance studio
-      'DV24': 'https://images.unsplash.com/photo-1518611012118-696072aa579a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Zumba party
-      
-      // CARDIO - TuDo
-      'DV25': 'https://images.unsplash.com/photo-1571019614081-0f8e6e4b2ca2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Treadmill
-      'DV26': 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Cardio machines
-      'DV27': 'https://images.unsplash.com/photo-1485727749690-d091e8284ef3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Running
-      'DV28': 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Cardio workout
-      
-      // CARDIO - PT
-      'DV29': 'https://images.unsplash.com/photo-1571019614332-74ec4e351994?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Cardio PT
-      'DV30': 'https://images.unsplash.com/photo-1549576490-b0b4831ef60a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Intensive cardio
-      'DV31': 'https://images.unsplash.com/photo-1566241440091-ec10de8db2e1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // HIIT training
-      'DV32': 'https://images.unsplash.com/photo-1517963628607-235ccdd5476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Elite cardio
-      
-      // BƠI - TuDo
-      'DV33': 'https://images.unsplash.com/photo-1530549387789-4c1017266635?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Swimming pool
-      'DV34': 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Pool lanes
-      'DV35': 'https://images.unsplash.com/photo-1530143808100-583d5ff08862?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Swimming
-      'DV36': 'https://images.unsplash.com/photo-1571019614332-74ec4e351994?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Pool facility
-      
-      // BƠI - Lop
-      'DV37': 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Swimming lesson
-      'DV38': 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Swim class
-      'DV39': 'https://images.unsplash.com/photo-1530549387789-4c1017266635?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Group swimming
-      'DV40': 'https://images.unsplash.com/photo-1530143808100-583d5ff08862?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Pro swimming
-      
-      // CROSSFIT - TuDo
-      'DV41': 'https://images.unsplash.com/photo-1517963628607-235ccdd5476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // CrossFit box
-      'DV42': 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Functional training
-      'DV43': 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // CrossFit WOD
-      'DV44': 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // CrossFit athlete
-      
-      // CROSSFIT - PT
-      'DV45': 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // CrossFit coaching
-      'DV46': 'https://images.unsplash.com/photo-1566241440091-ec10de8db2e1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Personal CrossFit
-      'DV47': 'https://images.unsplash.com/photo-1583500178690-f7d24f6bd16c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', // Elite CrossFit
-      'DV48': 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'  // Premium CrossFit
-    };
-    
-    return imageMap[service.maDV] || 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-  };
-
-  const getServiceTypeLabel = (loaiDV) => {
-    const labels = {
-      'TuDo': 'Tự do',
-      'Lop': 'Lớp học',
-      'PT': 'Personal Training'
-    };
-    return labels[loaiDV] || loaiDV;
-  };
-
-  const getServiceTypeColor = (loaiDV) => {
-    const colors = {
-      'TuDo': 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      'Lop': 'bg-blue-100 text-blue-800 border-blue-200',
-      'PT': 'bg-purple-100 text-purple-800 border-purple-200'
-    };
-    return colors[loaiDV] || 'bg-gray-100 text-gray-800 border-gray-200';
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
+    navigate('/checkout');
   };
 
   const handleServiceClick = (service) => {
@@ -331,14 +311,11 @@ const Services = () => {
 
   const toggleFavorite = (serviceId, e) => {
     e.stopPropagation();
-    setFavorites(prev => {
-      const newFavorites = new Set(prev);
-      if (newFavorites.has(serviceId)) {
-        newFavorites.delete(serviceId);
-      } else {
-        newFavorites.add(serviceId);
-      }
-      return newFavorites;
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(serviceId)) next.delete(serviceId);
+      else next.add(serviceId);
+      return next;
     });
   };
 
@@ -376,7 +353,7 @@ const Services = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex flex-col">
       <Header variant="solid" />
-      
+
       {/* Floating Cart Button */}
       <button
         onClick={() => setShowCartSidebar(true)}
@@ -384,7 +361,7 @@ const Services = () => {
       >
         <div className="relative">
           <ShoppingCart className="h-6 w-6" />
-          {cart && cart.length > 0 && (
+          {cart.length > 0 && (
             <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-semibold">
               {getItemCount()}
             </span>
@@ -408,7 +385,7 @@ const Services = () => {
                   </button>
                 </div>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto p-6">
                 {cart.length === 0 ? (
                   <div className="text-center text-gray-500 mt-8">
@@ -417,32 +394,34 @@ const Services = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {cart.map(item => (
+                    {cart.map((item) => (
                       <div key={item.maDV} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
                         <div className="flex-1">
                           <h4 className="font-medium text-gray-900">{item.tenDV}</h4>
                           <p className="text-sm text-gray-500">{formatPrice(item.donGia)}</p>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <button 
-                            onClick={() => updateQuantity(item.maDV, item.quantity - 1)}
+                          <button
+                            onClick={() => updateQuantity(item.maDV, (item.quantity || 1) - 1)}
                             className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
                           >
                             -
                           </button>
-                          <span className="w-8 text-center">{item.quantity}</span>
-                          <button 
-                            onClick={() => updateQuantity(item.maDV, item.quantity + 1)}
+                          <span className="w-8 text-center">{item.quantity || 1}</span>
+                          <button
+                            onClick={() => updateQuantity(item.maDV, (item.quantity || 1) + 1)}
                             className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
                           >
                             +
                           </button>
-                          <button 
-                            onClick={() => removeFromCart(item.maDV)}
-                            className="text-red-500 hover:text-red-700 ml-2"
-                          >
+                          <button onClick={() => removeFromCart(item.maDV)} className="text-red-500 hover:text-red-700 ml-2">
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
                             </svg>
                           </button>
                         </div>
@@ -451,7 +430,7 @@ const Services = () => {
                   </div>
                 )}
               </div>
-              
+
               {cart.length > 0 && (
                 <div className="border-t p-6 space-y-4">
                   <div className="flex justify-between text-lg font-semibold">
@@ -470,16 +449,37 @@ const Services = () => {
           </div>
         </div>
       )}
-      
-
 
       {/* Page Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
+          <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">Danh sách dịch vụ</h1>
             <p className="text-lg text-gray-600">Khám phá và đăng ký các dịch vụ tập luyện phù hợp với bạn</p>
           </div>
+
+          {/* Department Selection */}
+          {boMonList.length > 0 && (
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">Chọn bộ môn</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {boMonList.map((boMon) => (
+                  <button
+                    key={boMon.maBM}
+                    onClick={() => handleBoMonSelect(boMon)}
+                    className={`p-4 rounded-xl border-2 transition-all duration-200 text-center hover:scale-105 ${
+                      selectedBoMon?.maBM === boMon.maBM
+                        ? 'border-orange-500 bg-orange-50 text-orange-700'
+                        : 'border-gray-200 bg-white hover:border-orange-300 hover:bg-orange-50'
+                    }`}
+                  >
+                    <div className="text-3xl mb-2">{getCategoryIcon(boMon.tenBM)}</div>
+                    <div className="font-medium text-sm">{boMon.tenBM}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -490,9 +490,7 @@ const Services = () => {
           <div className="grid md:grid-cols-4 gap-6 mb-6">
             {/* Search Bar */}
             <div className="md:col-span-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Tìm kiếm dịch vụ
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Tìm kiếm dịch vụ</label>
               <div className="relative">
                 <input
                   type="text"
@@ -505,19 +503,20 @@ const Services = () => {
               </div>
             </div>
 
-            {/* Category Filter */}
+            {/* Department Filter */}
             <div className="md:col-span-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Loại dịch vụ
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Bộ môn</label>
               <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                value={selectedBoMon?.maBM || ''}
+                onChange={(e) => {
+                  const boMon = boMonList.find((bm) => bm.maBM === e.target.value);
+                  if (boMon) handleBoMonSelect(boMon);
+                }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
               >
-                {categories.map((category) => (
-                  <option key={category.value} value={category.value}>
-                    {category.icon} {category.label}
+                {boMonList.map((boMon) => (
+                  <option key={boMon.maBM} value={boMon.maBM}>
+                    {getCategoryIcon(boMon.tenBM)} {boMon.tenBM}
                   </option>
                 ))}
               </select>
@@ -525,9 +524,7 @@ const Services = () => {
 
             {/* Price Range Filter */}
             <div className="md:col-span-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Mức giá
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Mức giá</label>
               <select
                 value={priceRange}
                 onChange={(e) => setPriceRange(e.target.value)}
@@ -543,9 +540,7 @@ const Services = () => {
 
             {/* Sort Filter */}
             <div className="md:col-span-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Sắp xếp theo
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Sắp xếp theo</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -564,27 +559,31 @@ const Services = () => {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
             <div className="flex items-center space-x-4 mb-4 sm:mb-0">
               <span className="text-lg font-semibold text-gray-800">
-                Tìm thấy {filteredServices.length} dịch vụ
+                {selectedBoMon ? `${selectedBoMon.tenBM}: ` : ''}Tìm thấy {filteredServices.length} dịch vụ
               </span>
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === 'grid' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
                 >
                   <Grid className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === 'list' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
                 >
                   <List className="w-5 h-5" />
                 </button>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3">
               <Filter className="w-5 h-5 text-gray-500" />
-              <span className="text-sm text-gray-600">Được sắp xếp theo độ phổ biến</span>
+              <span className="text-sm text-gray-600">Đang sắp xếp: {sortBy}</span>
             </div>
           </div>
         </div>
@@ -598,17 +597,24 @@ const Services = () => {
             <h3 className="text-3xl font-bold text-gray-800 mb-3">Không tìm thấy dịch vụ</h3>
             <p className="text-gray-600 text-lg mb-8">Hãy thử tìm kiếm với từ khóa khác hoặc thay đổi bộ lọc</p>
             <button
-              onClick={() => { setSearchTerm(''); setSelectedCategory('ALL'); setPriceRange('ALL'); }}
+              onClick={() => {
+                setSearchTerm('');
+                setPriceRange('ALL');
+              }}
               className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-2xl hover:scale-105 transition-transform shadow-xl hover:shadow-2xl"
             >
               Xóa bộ lọc
             </button>
           </div>
         ) : (
-          <div className={viewMode === 'grid' 
-            ? "grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-fade-in-up" 
-            : "space-y-6 animate-fade-in-up"
-          } style={{animationDelay: '0.3s'}}>
+          <div
+            className={
+              viewMode === 'grid'
+                ? 'grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-fade-in-up'
+                : 'space-y-6 animate-fade-in-up'
+            }
+            style={{ animationDelay: '0.3s' }}
+          >
             {filteredServices.map((service, index) => (
               <div
                 key={service.maDV}
@@ -616,27 +622,37 @@ const Services = () => {
                 className={`bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer border border-gray-100 overflow-hidden group ${
                   viewMode === 'list' ? 'flex items-center p-6' : ''
                 }`}
-                style={{animationDelay: `${0.1 * (index % 8)}s`}}
+                style={{ animationDelay: `${0.1 * (index % 8)}s` }}
               >
                 {/* Service Image */}
-                <div className={`${viewMode === 'list' ? 'w-24 h-24 mr-6 flex-shrink-0' : 'h-48'} relative overflow-hidden ${viewMode === 'grid' ? '' : 'rounded-2xl'}`}>
-                  <img 
+                <div
+                  className={`${
+                    viewMode === 'list' ? 'w-24 h-24 mr-6 flex-shrink-0' : 'h-48'
+                  } relative overflow-hidden ${viewMode === 'grid' ? '' : 'rounded-2xl'}`}
+                >
+                  <img
                     src={getCategoryImage(service)}
                     alt={service.tenDV}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-black opacity-20 group-hover:opacity-10 transition-opacity duration-300"></div>
-                  
+
                   {/* Service Type Badge */}
-                  <div className={`absolute top-2 ${viewMode === 'list' ? 'right-2' : 'right-4'} ${getServiceTypeColor(service.loaiDV)} backdrop-blur-sm rounded-full px-3 py-1 text-xs font-semibold border`}>
+                  <div
+                    className={`absolute top-2 ${
+                      viewMode === 'list' ? 'right-2' : 'right-4'
+                    } ${getServiceTypeColor(service.loaiDV)} backdrop-blur-sm rounded-full px-3 py-1 text-xs font-semibold border`}
+                  >
                     {getServiceTypeLabel(service.loaiDV)}
                   </div>
 
                   {/* Favorite Button */}
                   <button
                     onClick={(e) => toggleFavorite(service.maDV, e)}
-                    className={`absolute ${viewMode === 'list' ? 'bottom-2 right-2' : 'top-4 left-4'} p-2 rounded-full backdrop-blur-sm border-2 transition-all duration-300 ${
+                    className={`absolute ${
+                      viewMode === 'list' ? 'bottom-2 right-2' : 'top-4 left-4'
+                    } p-2 rounded-full backdrop-blur-sm border-2 transition-all duration-300 ${
                       favorites.has(service.maDV)
                         ? 'bg-red-500/90 border-red-400 text-white'
                         : 'bg-white/80 border-white/50 text-gray-700 hover:bg-white'
@@ -648,7 +664,11 @@ const Services = () => {
 
                 <div className={`${viewMode === 'list' ? 'flex-grow' : 'p-6'}`}>
                   {/* Service Title */}
-                  <h3 className={`${viewMode === 'list' ? 'text-lg' : 'text-xl'} font-bold text-gray-800 mb-2 group-hover:text-orange-600 transition-colors duration-200`}>
+                  <h3
+                    className={`${
+                      viewMode === 'list' ? 'text-lg' : 'text-xl'
+                    } font-bold text-gray-800 mb-2 group-hover:text-orange-600 transition-colors duration-200`}
+                  >
                     {service.tenDV}
                   </h3>
 
@@ -663,7 +683,10 @@ const Services = () => {
                   {/* Duration & Features */}
                   <div className="flex items-center text-sm text-gray-600 mb-4">
                     <Clock className="w-4 h-4 mr-2" />
-                    <span>Thời hạn: {service.thoiHan} ngày</span>
+                    <span>
+                      Thời hạn:{' '}
+                      {service.thoiHan == null ? 'Không giới hạn' : `${service.thoiHan} ngày`}
+                    </span>
                     {viewMode === 'list' && (
                       <>
                         <span className="mx-3">•</span>
@@ -674,22 +697,25 @@ const Services = () => {
                   </div>
 
                   {/* Price */}
-                  <div className={`flex items-center ${viewMode === 'list' ? 'justify-between' : 'justify-between'}`}>
+                  <div className="flex items-center justify-between">
                     <div>
                       <span className={`${viewMode === 'list' ? 'text-xl' : 'text-2xl'} font-bold text-orange-600`}>
                         {formatPrice(service.donGia)}
                       </span>
-                      {service.thoiHan && (
+                      {service.thoiHan != null && (
                         <span className="text-sm text-gray-500">/{service.thoiHan} ngày</span>
                       )}
                     </div>
                   </div>
 
-                  {/* Actions - moved to its own row so buttons won't overflow */}
+                  {/* Actions */}
                   <div className="mt-3 w-full">
                     <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
                       <button
-                        onClick={(e) => { e.stopPropagation(); addToCart(service); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToCart(service);
+                        }}
                         className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-full hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
                       >
                         <Plus className="w-4 h-4" />
@@ -697,7 +723,10 @@ const Services = () => {
                       </button>
 
                       <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/services/${service.maDV}`); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/services/${service.maDV}`, { state: { service } });
+                        }}
                         className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-full hover:from-orange-600 hover:to-orange-700 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
                       >
                         <span>Chi tiết</span>
@@ -712,29 +741,28 @@ const Services = () => {
         )}
 
         {/* CTA Section */}
-        <div className="mt-20 bg-gradient-to-r from-orange-500 via-red-500 to-pink-600 rounded-3xl text-white p-12 text-center shadow-2xl animate-fade-in-up" style={{animationDelay: '0.6s'}}>
-          <h2 className="text-4xl font-bold mb-6">
-            Sẵn sàng bắt đầu hành trình của bạn?
-          </h2>
+        <div
+          className="mt-20 bg-gradient-to-r from-orange-500 via-red-500 to-pink-600 rounded-3xl text-white p-12 text-center shadow-2xl animate-fade-in-up"
+          style={{ animationDelay: '0.6s' }}
+        >
+          <h2 className="text-4xl font-bold mb-6">Sẵn sàng bắt đầu hành trình của bạn?</h2>
           <p className="text-xl mb-8 text-orange-100 max-w-2xl mx-auto">
             Tham gia cùng hàng nghìn thành viên đã tin tưởng chúng tôi để đạt được mục tiêu sức khỏe và thể hình
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
+            <button
               onClick={() => navigate('/register')}
               className="bg-white text-orange-600 px-8 py-4 rounded-full font-semibold hover:bg-gray-100 transition-all duration-200 transform hover:scale-105 shadow-lg"
             >
               Đăng ký ngay hôm nay
             </button>
-            <button 
-              className="border-2 border-white text-white px-8 py-4 rounded-full font-semibold hover:bg-white hover:text-orange-600 transition-all duration-200 transform hover:scale-105"
-            >
+            <button className="border-2 border-white text-white px-8 py-4 rounded-full font-semibold hover:bg-white hover:text-orange-600 transition-all duration-200 transform hover:scale-105">
               Liên hệ tư vấn
             </button>
           </div>
         </div>
       </div>
-      
+
       <ReusableFooter />
     </div>
   );

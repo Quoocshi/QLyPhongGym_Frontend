@@ -18,7 +18,7 @@ import TrainerHome from './pages/TrainerHome';
 import Services from './pages/Services';
 import ServiceDetail from './pages/ServiceDetail';
 import Cart from './pages/Cart';
-import UserProfile from './pages/UserProfile';
+// import UserProfile from './pages/UserProfile';
 import UserLayout from './layout/UserLayout';
 import ErrorPage from './pages/ErrorPage';
 
@@ -40,7 +40,10 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/services" element={<Services />} />
-              <Route path="/services/:id" element={<ServiceDetail />} />
+              <Route path="/services/:maDV" element={<ServiceDetail />} />
+              <Route path="/services/detail" element={<ServiceDetail />} />
+              <Route path="/checkout" element={<Cart />} />
+              <Route path="/my-services" element={<MyServices />} />
               <Route path="/register-service" element={<RegisterService />} />
               <Route path="/trainer/home" element={<TrainerHome />} />
 
@@ -51,7 +54,6 @@ function App() {
                 <Route path="cart" element={<Cart />} />
                 <Route path="lich-tap" element={<UserSchedule />} />
                 <Route path="dich-vu-cua-toi" element={<MyServices />} />
-                <Route path="profile" element={<UserProfile />} />
               </Route>
 
               {/* Legacy routes */}

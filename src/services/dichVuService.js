@@ -1,57 +1,122 @@
-import api from '../config/apiConfig.js';
+import { tokenService } from '../utils/tokenService.js';
 
-// dichVuService now uses the shared `api` axios instance from `src/config/apiConfig.js`
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081';
+
+/**
+ * Helper dùng chung cho tất cả request
+ */
+const makeRequest = async (url, options = {}) => {
+  const token = tokenService.getToken();
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    ...options.headers,
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const fullUrl = url.startsWith('http') ? url : `${API_URL}${url}`;
+
+  const response = await fetch(fullUrl, {
+    ...options,
+    headers,
+    credentials: 'include',
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(data.error || data.message || `HTTP ${response.status}`);
+    error.response = {
+      status: response.status,
+      data,
+    };
+    throw error;
+  }
+
+  return data;
+};
+
+/**
+ * =========================
+ * DỊCH VỤ GYM – USER FLOW
+ * =========================
+ */
 export const dichVuService = {
-    getDanhSachDichVu: async () => {
-        try {
-            const response = await api.get('/api/public/dich-vu/danh-sach');
-            return response.data;
-        } catch (error) {
-            console.warn('⚠️ getDanhSachDichVu failed, falling back to caller handling:', error.message);
-            throw error;
-        }
-    },
 
-    getDichVuDetail: async (maDV) => {
-        try {
-            const response = await api.get(`/api/public/dich-vu/${maDV}`);
-            return response.data;
-        } catch (error) {
-            console.warn('⚠️ getDichVuDetail failed:', error.message);
-            throw error;
-        }
-    },
+  /**
+   * 1. Lấy thông tin khách hàng + danh sách bộ môn + dịch vụ
+   * BE: GET /api/dich-vu-gym/dang-kydv
+   */
+  getDangKyDichVu: () => {
+    return makeRequest('/api/dich-vu-gym/dang-kydv', {
+      method: 'GET',
+    });
+  },
 
-    getDichVuByLoai: async (loaiDV) => {
-        try {
-            const response = await api.get(`/public/dich-vu/loai/${loaiDV}`);
-            return response.data;
-        } catch (error) {
-            console.error('⚠️ getDichVuByLoai error:', error.message);
-            throw error;
-        }
-    },
+  /**
+   * 2. Lấy dịch vụ theo bộ môn
+   * BE: GET /api/dich-vu-gym/dich-vu-theo-bo-mon?maBM=...
+   */
+  getDichVuTheoBoMon: (maBM) => {
+    return makeRequest(
+      `/api/dich-vu-gym/dich-vu-theo-bo-mon?maBM=${encodeURIComponent(maBM)}`,
+      { method: 'GET' }
+    );
+  },
 
-    searchDichVu: async (keyword) => {
-        try {
-            const response = await api.get('/public/dich-vu/tim-kiem', { params: { keyword } });
-            return response.data;
-        } catch (error) {
-            console.error('⚠️ searchDichVu error:', error.message);
-            throw error;
-        }
-    },
+  /**
+   * 3. Chọn lớp cho dịch vụ loại LỚP
+   * BE: GET /api/dich-vu-gym/chonlop?maDV=...
+   */
+  getChonLop: (maDV) => {
+    return makeRequest(
+      `/api/dich-vu-gym/chonlop?maDV=${encodeURIComponent(maDV)}`,
+      { method: 'GET' }
+    );
+  },
 
-    dangKyDichVu: async (payload) => {
-        try {
-            // `api` already attaches Authorization header from tokenService if present
-            const response = await api.post('/dich-vu-gym/dang-ky-dv-universal', payload, {
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-            });
-            return response.data;
-        } catch (error) {
-            console.warn('⚠️ dangKyDichVu error:', error.message);
-            throw error;
-        }
-    }
+  /**
+   * 4. Chọn PT cho dịch vụ loại PT
+   * BE: GET /api/dich-vu-gym/chonpt?maDV=...
+   */
+  getChonPT: (maDV) => {
+    return makeRequest(
+      `/api/dich-vu-gym/chonpt?maDV=${encodeURIComponent(maDV)}`,
+      { method: 'GET' }
+    );
+  },
+
+  /**
+   * 5. Đăng ký dịch vụ (Universal – Tự do / PT / Lớp)
+   * BE: POST /api/dich-vu-gym/dang-ky-dv-universal
+   *
+   * Payload mẫu:
+   * {
+   *   accountId: 1,
+   *   maKH: "KH001",
+   *   dsMaDV: ["DV01", "DV02"],
+   *   dsTrainerId: ["NV01"],   // optional
+   *   dsClassId: ["L01"]       // optional
+   * }
+   */
+  dangKyDichVuUniversal: (payload) => {
+    return makeRequest('/api/dich-vu-gym/dang-ky-dv-universal', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * 6. Danh sách dịch vụ đã đăng ký (đã thanh toán)
+   * BE: GET /api/dich-vu-gym/dich-vu-cua-toi
+   */
+  getDichVuCuaToi: () => {
+    return makeRequest('/api/dich-vu-gym/dich-vu-cua-toi', {
+      method: 'GET',
+    });
+  },
 };

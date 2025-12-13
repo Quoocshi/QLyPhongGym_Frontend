@@ -37,18 +37,12 @@ const menu = [
     icon: Calendar,
     gradient: "from-purple-500 to-pink-600",
   },
-  {
+  { 
     to: "/user/cart",
     label: "Giỏ hàng",
     icon: ShoppingCart,
     gradient: "from-yellow-500 to-orange-600",
-  },
-  {
-    to: "/user/profile",
-    label: "Thông tin cá nhân",
-    icon: User,
-    gradient: "from-gray-500 to-gray-700",
-  },
+  }
 ];
 
 const UserLayout = () => {
@@ -112,11 +106,11 @@ const UserLayout = () => {
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-300 to-orange-100 flex items-center justify-center text-white font-bold text-lg">
                       {user?.hoTen
                         ? user.hoTen
-                            .split(" ")
-                            .slice(-2)
-                            .map((w) => w[0])
-                            .join("")
-                            .toUpperCase()
+                          .split(" ")
+                          .slice(-2)
+                          .map((w) => w[0])
+                          .join("")
+                          .toUpperCase()
                         : "NV"}
                     </div>
                     <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-400 border-2 border-white" />
@@ -144,32 +138,28 @@ const UserLayout = () => {
                   to={item.to}
                   onClick={() => setSidebarOpen(false)}
                   className={({ isActive }) =>
-                    `group flex items-center gap-4 px-4 py-4 rounded-2xl transition-all duration-300 ${
-                      isActive
-                        ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg shadow-orange-200`
-                        : "text-gray-700 hover:bg-gray-50 hover:shadow-md"
+                    `group flex items-center gap-4 px-4 py-4 rounded-2xl transition-all duration-300 ${isActive
+                      ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg shadow-orange-200`
+                      : "text-gray-700 hover:bg-gray-50 hover:shadow-md"
                     }`
                   }
                 >
                   {({ isActive }) => (
                     <>
                       <div
-                        className={`p-2 rounded-xl transition-colors ${
-                          isActive
+                        className={`p-2 rounded-xl transition-colors ${isActive
                             ? "bg-white/20"
                             : "bg-gray-100 group-hover:bg-gray-200"
-                        }`}
+                          }`}
                       >
                         <Icon
-                          className={`w-5 h-5 ${
-                            isActive ? "text-white" : "text-gray-600"
-                          }`}
+                          className={`w-5 h-5 ${isActive ? "text-white" : "text-gray-600"
+                            }`}
                         />
                       </div>
                       <span
-                        className={`font-semibold ${
-                          isActive ? "text-white" : "text-gray-800"
-                        }`}
+                        className={`font-semibold ${isActive ? "text-white" : "text-gray-800"
+                          }`}
                       >
                         {item.label}
                       </span>
@@ -224,10 +214,9 @@ const UserLayout = () => {
                   <NavLink
                     to="/"
                     className={({ isActive }) =>
-                      `px-4 py-2 rounded-xl font-medium transition-all ${
-                        isActive
-                          ? "bg-orange-100 text-orange-600"
-                          : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"
+                      `px-4 py-2 rounded-xl font-medium transition-all ${isActive
+                        ? "bg-orange-100 text-orange-600"
+                        : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"
                       }`
                     }
                   >
@@ -236,10 +225,9 @@ const UserLayout = () => {
                   <NavLink
                     to="/services"
                     className={({ isActive }) =>
-                      `ml-1 px-4 py-2 rounded-xl font-medium transition-all ${
-                        isActive
-                          ? "bg-orange-100 text-orange-600"
-                          : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"
+                      `ml-1 px-4 py-2 rounded-xl font-medium transition-all ${isActive
+                        ? "bg-orange-100 text-orange-600"
+                        : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"
                       }`
                     }
                   >

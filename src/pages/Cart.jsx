@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext.jsx';
 import { useMyServices } from '../contexts/MyServicesContext.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
+import { dichVuService } from '../services/dichVuService.js';
 import { invoiceService } from '../services/invoiceService.js';
 import { paymentService } from '../services/paymentService.js';
+import { userService } from '../services/userService.js';
 import { ShoppingCart, Trash2, CreditCard, Loader, Plus, Minus, Shield, Truck, Award, CheckCircle, ArrowLeft, Heart, Gift, Percent, Clock, X } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext.jsx';
 import Header from '../components/common/Header.jsx';
@@ -12,9 +15,18 @@ import ReusableFooter from '../components/common/ReusableFooter.jsx';
 const Cart = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, user } = useAuth();
   const { items: cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
   const { addServices } = useMyServices();
   const { addToast } = useToast();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
+  }, [isAuthenticated, navigate, location]);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [promoCode, setPromoCode] = useState('');
@@ -115,9 +127,17 @@ const Cart = () => {
     if (promoCodes[promoCode]) {
       setDiscount(promoCodes[promoCode].discount);
       setShowPromoInput(false);
-      alert(`Áp dụng mã giảm giá thành công: ${promoCodes[promoCode].description}`);
+      addToast({
+        message: `✅ Áp dụng mã giảm giá thành công: ${promoCodes[promoCode].description}`,
+        type: 'success',
+        duration: 4000
+      });
     } else {
-      alert('Mã giảm giá không hợp lệ!');
+      addToast({
+        message: 'Mã giảm giá không hợp lệ!',
+        type: 'error',
+        duration: 3000
+      });
     }
   };
 
@@ -142,7 +162,7 @@ const Cart = () => {
 
   const handleCheckout = () => {
     if (selectedItems.size === 0) {
-      alert('Vui lòng chọn ít nhất một sản phẩm để thanh toán');
+      addToast({ message: 'Vui lòng chọn ít nhất một sản phẩm để thanh toán', type: 'error' });
       return;
     }
     setShowPaymentModal(true);
@@ -150,42 +170,140 @@ const Cart = () => {
 
   const handlePayment = async () => {
     if (!paymentForm.customerName || !paymentForm.email || !paymentForm.phone) {
-      alert('Vui lòng điền đầy đủ thông tin khách hàng');
+      addToast({ message: 'Vui lòng điền đầy đủ thông tin khách hàng', type: 'error' });
       return;
     }
 
     try {
       setProcessing(true);
       
-      // Mock successful payment
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Add selected services to MyServicesContext
+      // 🔥 Giống RegisterService logic - xử lý nhiều dịch vụ
       const selectedServices = getSelectedItems();
+      
+      // Validate có khách hàng và accountId
+      if (!user?.accountId) {
+        addToast({ message: 'Thiếu thông tin tài khoản', type: 'error' });
+        return;
+      }
+
+      // Build payload cho universal registration
+      const registrationData = {
+        accountId: user.accountId,
+        maKH: user?.maKH || 'KH001', // fallback
+        dsMaDV: selectedServices.map(item => item.maDV),
+        dsTrainerId: selectedServices.map(item => item.selectedTrainer?.maNV || item.selectedTrainer?.id).filter(Boolean),
+        dsClassId: selectedServices.map(item => item.selectedClass?.maLop).filter(Boolean)
+      };
+      
+      console.log('📝 Cart registration:', registrationData);
+      
+      // 1) Tạo hóa đơn + CT_DKDV
+      const response = await dichVuService.dangKyDichVuUniversal(registrationData);
+      const maHD = response?.maHD;
+      
+      if (!maHD) throw new Error('Không nhận được maHD từ server.');
+      
+      // 2) Thanh toán qua MoMo
+      const payRes = await paymentService.momoPay(maHD);
+      
+      // 3) 🔥 Tự động tạo lịch tập cho PT/Lớp (giống RegisterService)
+      const lichTapPromises = [];
+      for (const item of selectedServices) {
+        if (item.loaiDV === 'PT' && item.selectedTrainer) {
+          lichTapPromises.push(
+            userService.createLichTapPT({
+              maKH: user?.maKH || 'KH001',
+              maDV: item.maDV,
+              maNV: item.selectedTrainer.maNV || item.selectedTrainer.id,
+              ngay: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // ngày mai
+              gio: '08:00',
+              thu: '246' // T2, T4, T6 mặc định
+            })
+          );
+        } else if (item.loaiDV === 'Lop' && item.selectedClass) {
+          lichTapPromises.push(
+            userService.createLichTapLop({
+              maKH: user?.maKH || 'KH001',
+              maDV: item.maDV,
+              maLop: item.selectedClass.maLop,
+              ngay: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              gio: '08:00',
+              thu: '246'
+            })
+          );
+        }
+      }
+
+      // Tạo lịch tập (không block nếu lỗi)
+      if (lichTapPromises.length > 0) {
+        try {
+          console.log('🔥 Tạo lịch tập cho', lichTapPromises.length, 'dịch vụ...');
+          const results = await Promise.allSettled(lichTapPromises);
+          console.log('📅 Kết quả tạo lịch:', results);
+          
+          const successCount = results.filter(r => r.status === 'fulfilled').length;
+          const errorCount = results.filter(r => r.status === 'rejected').length;
+          
+          if (successCount > 0) {
+            addToast({
+              message: `✅ Đã tạo ${successCount} lịch tập!`,
+              type: 'success',
+              duration: 3000
+            });
+          }
+          if (errorCount > 0) {
+            console.warn('❌ Lỗi tạo lịch:', results.filter(r => r.status === 'rejected'));
+            addToast({
+              message: `⚠️ ${errorCount} lịch tập không tạo được (cần Backend hỗ trợ)`,
+              type: 'error',
+              duration: 4000
+            });
+          }
+        } catch (err) {
+          console.error('❌ Lỗi tạo lịch tập:', err);
+          addToast({
+            message: 'Backend chưa hỗ trợ tạo lịch tập tự động',
+            type: 'error',
+            duration: 4000
+          });
+        }
+      }
+      
+      // Success toast
+      addToast({
+        message: `🎉 Thanh toán thành công ${selectedServices.length} dịch vụ! Mã HD: ${maHD} - ${formatCurrency(calculateTotal())}`,
+        type: 'success',
+        duration: 5000
+      });
+      
+      // Add to MyServices context
       const servicesToAdd = selectedServices.map(item => ({
-        maDV: item.maDV || item.maDichVu || item.id,
-        tenDV: item.tenDV || item.tenDichVu || item.name,
-        gia: item.donGia || item.giaTien || item.price,
+        maDV: item.maDV,
+        tenDV: item.tenDV,
+        gia: item.donGia,
         trangThai: 'active',
         ngayDangKy: new Date().toISOString().split('T')[0],
-        boMon: item.tenBM || item.boMon || 'N/A'
+        boMon: item.tenBM || 'N/A'
       }));
-      
       addServices(servicesToAdd);
       
-      // Remove selected items from cart
+      // Remove from cart
       selectedServices.forEach(item => {
-        removeFromCart(item.maDV || item.maDichVu || item.id);
+        removeFromCart(item.maDV);
       });
       
       setSelectedItems(new Set());
       setShowPaymentModal(false);
       
-      addToast({ message: '🎉 Thanh toán thành công — dịch vụ đã được thêm vào tài khoản của bạn.', type: 'success', duration: 4000 });
-      navigate('/user/dich-vu-cua-toi');
+      // Navigate to my services
+      setTimeout(() => {
+        navigate('/user/dich-vu-cua-toi');
+      }, 2000);
+      
     } catch (err) {
-      console.error('Payment error:', err);
-      alert('Có lỗi xảy ra khi thanh toán. Vui lòng thử lại.');
+      console.error('❌ Payment failed:', err);
+      const errorMsg = err?.response?.data?.error || err?.message || 'Lỗi thanh toán';
+      addToast({ message: errorMsg, type: 'error', duration: 5000 });
     } finally {
       setProcessing(false);
     }

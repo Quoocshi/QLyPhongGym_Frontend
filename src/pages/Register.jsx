@@ -2,6 +2,7 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService.js';
 import { tokenService } from '../utils/tokenService.js';
+import { useToast } from '../contexts/ToastContext.jsx';
 import { ArrowLeft, Check, X, Eye, EyeOff, Dumbbell, Sparkles, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 
@@ -12,6 +13,7 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { addToast } = useToast();
 
   const password = watch("password", "");
 
@@ -36,35 +38,47 @@ const Register = () => {
     setError('');
     try {
       const response = await authService.register({
-        fullName: data.fullName,
-        name: data.fullName,
-        email: data.email,
-        password: data.password,
-        phone: data.phone,
         username: data.username,
-        gender: data.gender,
-        dob: formatDate(data.dob), // Convert to DD/MM/YYYY
-        address: data.address
+        password: data.password,
+        hoTen: data.fullName,
+        gioiTinh: data.gender === 'male' ? 'Nam' : 'Nữ',
+        ngaySinh: formatDate(data.dob), // Convert to DD/MM/YYYY format
+        email: data.email,
+        soDienThoai: data.phone,
+        diaChi: data.address
       });
       
       console.log('Registration successful:', response);
-      
-      // If registration returns token, auto-login
-      if (response.token || response.accessToken) {
-        const token = response.token || response.accessToken;
-        tokenService.setToken(token);
+
+      // Backend returns accessToken after successful registration
+      if (response.accessToken) {
+        tokenService.setToken(response.accessToken);
+        // Create basic user data for context
+        const userData = {
+          username: response.username || data.username,
+          role: 'USER',
+          email: data.email,
+          hoTen: data.fullName
+        };
+        try {
+          localStorage.setItem('auth_user', JSON.stringify(userData));
+        } catch (e) {}
+        addToast({ message: response.message || 'Đăng ký thành công', type: 'success' });
         navigate('/user/home');
       } else {
         // Otherwise redirect to login page with success message
-        navigate('/login', { 
-          state: { 
-            message: response.message || 'Đăng ký thành công! Vui lòng đăng nhập.' 
-          } 
+        addToast({ message: response.message || 'Đăng ký thành công! Vui lòng đăng nhập.', type: 'success' });
+        navigate('/login', {
+          state: {
+            message: response.message || 'Đăng ký thành công! Vui lòng đăng nhập.'
+          }
         });
       }
     } catch (err) {
       console.error('Registration error:', err);
-      setError(err.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+      const message = err.response?.data?.message || err.message || 'Đăng ký thất bại. Vui lòng thử lại.';
+      setError(message);
+      addToast({ message, type: 'error' });
     } finally {
       setIsLoading(false);
     }
