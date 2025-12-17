@@ -140,8 +140,40 @@ export const dichVuGymService = {
 };
 
 export const trainerService = {
+    // Lấy thông tin trainer
     getHome: async () => {
         const response = await api.get('/trainer/home');
+        return response.data;
+    },
+    // Lấy lịch PT của trainer (bao gồm: dsPTCustomers, dsPTSchedules, dsCaTap, dsKhuVuc)
+    getLichCaNhan: async () => {
+        const response = await api.get('/trainer/lich-canhan');
+        return response.data;
+    },
+    // Lấy danh sách lớp của trainer
+    getLichLop: async () => {
+        const response = await api.get('/trainer/lich-lop');
+        return response.data;
+    },
+    // Tạo lịch tập PT mới
+    taoLichPT: async (lichTapData) => {
+        // lichTapData: { maKH, ngayTap, caTap, maKV }
+        const response = await api.post('/trainer/tao-lich-pt', lichTapData);
+        return response.data;
+    },
+    // Kiểm tra xung đột lịch
+    kiemTraXungDot: async (ngay, caTap) => {
+        const response = await api.post('/trainer/kiem-tra-xung-dot', { ngay, caTap });
+        return response.data;
+    },
+    // Debug: lấy danh sách khách hàng PT
+    debugPTCustomers: async () => {
+        const response = await api.get('/trainer/debug/ptCustomers');
+        return response.data;
+    },
+    // Hủy lịch tập PT
+    huyLichPT: async (maLT) => {
+        const response = await api.put(`/trainer/huy-lich-pt/${maLT}`);
         return response.data;
     }
 };
