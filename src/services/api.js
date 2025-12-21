@@ -62,7 +62,7 @@ export const authService = {
     },
     googleLogin: async (googleToken) => {
         // Backend expects: { idToken }
-        const response = await api.post('/auth/google', { 
+        const response = await api.post('/auth/google', {
             idToken: googleToken
         });
         return response.data;
@@ -178,6 +178,41 @@ export const trainerService = {
     }
 };
 
+export const staffService = {
+    // Lấy thông tin nhân viên
+    getHome: async () => {
+        const response = await api.get('/staff/home');
+        return response.data;
+    },
+    // Lấy danh sách khu vực
+    getAreas: async () => {
+        const response = await api.get('/staff/areas');
+        return response.data;
+    },
+    // Lấy danh sách thiết bị
+    getEquipment: async (filters) => {
+        // filters: { maKV?, trangThai?, search? }
+        const response = await api.get('/staff/equipment', { params: filters });
+        return response.data;
+    },
+    // Lấy danh sách phiếu bảo trì
+    getMaintenanceTickets: async () => {
+        const response = await api.get('/staff/maintenance-tickets');
+        return response.data;
+    },
+    // Tạo phiếu bảo trì mới
+    createMaintenanceTicket: async (ticketData) => {
+        // ticketData: { maTB, moTaLoi }
+        const response = await api.post('/staff/maintenance-tickets', ticketData);
+        return response.data;
+    },
+    // Cập nhật trạng thái thiết bị
+    updateEquipmentStatus: async (maTB, trangThaiMoi) => {
+        const response = await api.put(`/staff/equipment/${maTB}/status`, { trangThai: trangThaiMoi });
+        return response.data;
+    }
+};
+
 // JWT Token helpers
 export function parseJwt(token) {
     try {
@@ -202,14 +237,18 @@ export function getRoleFromToken(token) {
     if (!token) return null;
     const payload = parseJwt(token);
     if (!payload) return null;
-    
+
     // Check various role field names that backend might use
     const roleValue = payload.role || payload.roles || payload.loaiNguoiDung || payload.maLoaiNguoiDung || payload.type;
-    
+
     if (!roleValue) return null;
-    
+
     const roleStr = String(roleValue).toLowerCase();
-    
+
+    // Check for staff keywords (ROLE_STAFF from backend)
+    if (roleStr.includes('staff') || roleStr.includes('nhan_vien') || roleStr.includes('nhanvien') || roleStr === '3') {
+        return 'staff';
+    }
     // Check for trainer keywords
     if (roleStr.includes('trainer') || roleStr.includes('pt') || roleStr === '2') {
         return 'trainer';
@@ -218,7 +257,7 @@ export function getRoleFromToken(token) {
     if (roleStr.includes('user') || roleStr.includes('khach') || roleStr === '1') {
         return 'user';
     }
-    
+
     return null;
 }
 

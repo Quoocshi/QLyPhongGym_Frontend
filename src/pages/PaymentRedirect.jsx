@@ -30,7 +30,7 @@ const PaymentRedirect = () => {
   }, [maHD, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)' }}>
       <div className="w-full max-w-lg">
         <BackToUserHome className="mb-4" />
 

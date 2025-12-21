@@ -19,6 +19,54 @@ const Register = () => {
   const hasUpperCase = /[A-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
 
+  // Validate date of birth
+  const validateDateOfBirth = (dateString) => {
+    if (!dateString) return false;
+    
+    try {
+      const [year, month, day] = dateString.split('-');
+      
+      // Kiểm tra định dạng và giá trị hợp lệ
+      if (!year || !month || !day) return false;
+      
+      const yearNum = parseInt(year);
+      const monthNum = parseInt(month);
+      const dayNum = parseInt(day);
+      
+      // Kiểm tra năm hợp lệ (1900 - năm hiện tại)
+      const currentYear = new Date().getFullYear();
+      if (yearNum < 1900 || yearNum > currentYear) return false;
+      
+      // Kiểm tra tháng hợp lệ (1-12)
+      if (monthNum < 1 || monthNum > 12) return false;
+      
+      // Kiểm tra ngày hợp lệ (1-31)
+      if (dayNum < 1 || dayNum > 31) return false;
+      
+      // Kiểm tra ngày tháng năm thực tế có tồn tại không
+      const date = new Date(yearNum, monthNum - 1, dayNum);
+      if (date.getFullYear() !== yearNum || 
+          date.getMonth() !== monthNum - 1 || 
+          date.getDate() !== dayNum) {
+        return false;
+      }
+      
+      // Kiểm tra tuổi (16-100)
+      const today = new Date();
+      let age = today.getFullYear() - date.getFullYear();
+      const monthDiff = today.getMonth() - date.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+        age--;
+      }
+      
+      if (age < 16 || age > 100) return false;
+      
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
   // Convert date from YYYY-MM-DD to DD/MM/YYYY
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -28,6 +76,12 @@ const Register = () => {
 
   const onSubmit = async (data) => {
     if (!hasMinLength || !hasLowerCase || !hasUpperCase || !hasNumber) {
+        return;
+    }
+
+    // Validate ngày sinh
+    if (!validateDateOfBirth(data.dob)) {
+      setError('Ngày sinh không hợp lệ');
         return;
     }
 
@@ -47,14 +101,22 @@ const Register = () => {
       });
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+      // Kiểm tra lỗi liên quan đến ngày sinh
+      const errorMessage = err.response?.data?.message || '';
+      if (errorMessage.includes('LocalDate') || 
+          errorMessage.includes('DateTimeParseException') ||
+          errorMessage.includes('could not be parsed')) {
+        setError('Ngày sinh không hợp lệ');
+      } else {
+        setError(errorMessage || 'Đăng ký thất bại. Vui lòng thử lại.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-orange-50 via-white to-orange-50 relative overflow-hidden">
+    <div className="min-h-screen flex relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)' }}>
         {/* Animated Background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 right-20 w-72 h-72 bg-orange-200/30 rounded-full blur-3xl animate-float"></div>
@@ -187,6 +249,8 @@ const Register = () => {
                               <input
                                   id="dob"
                                   type="date"
+                                  min="1900-01-01"
+                                  max={new Date().toISOString().split('T')[0]}
                                   className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 sm:text-sm"
                                   {...register('dob', { required: 'Vui lòng chọn ngày sinh' })}
                               />

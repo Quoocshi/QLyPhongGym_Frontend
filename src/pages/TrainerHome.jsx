@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { trainerService, authService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
   Loader, AlertCircle, LogOut, Calendar, Users, Clock, MapPin,
-  Plus, Edit, Trash2, CheckCircle, XCircle, User, Star, 
+  Plus, Edit, Trash2, CheckCircle, XCircle, User, Star,
   Dumbbell, RefreshCw, ChevronDown, ChevronUp, Save, X,
   UserCheck, FileText, Filter, CalendarDays, AlertTriangle,
-  Award, Target, BookOpen, Grid3X3, ChevronLeft, ChevronRight
+  Award, Target, BookOpen, Grid3X3, ChevronLeft, ChevronRight,
+  Sun, Moon
 } from 'lucide-react';
 
 // Cấu hình các ngày trong tuần
@@ -35,7 +36,13 @@ const TrainerHome = () => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [activeTab, setActiveTab] = useState('schedule'); // schedule, customers, classes
-  
+
+  // Dark Mode
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved === 'true';
+  });
+
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -49,13 +56,13 @@ const TrainerHome = () => {
   const [submitting, setSubmitting] = useState(false);
   const [conflictWarning, setConflictWarning] = useState(false);
   const [actionLoading, setActionLoading] = useState(false); // Cho nút Dừng/Hủy
-  
+
   // Calendar month navigation
   const [currentMonth, setCurrentMonth] = useState(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
-  
+
   // Event detail modal
   const [showEventModal, setShowEventModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -68,7 +75,7 @@ const TrainerHome = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       // Fetch trainer home info
       const trainerData = await trainerService.getHome();
       setTrainerInfo(trainerData);
@@ -79,13 +86,13 @@ const TrainerHome = () => {
         console.log('=== DEBUG: lichCaNhan response ===', lichCaNhan);
         console.log('dsCaTap:', lichCaNhan.dsCaTap);
         console.log('dsKhuVuc:', lichCaNhan.dsKhuVuc);
-        
+
         setMaNV(lichCaNhan.maNV || '');
         setKhachHangList(lichCaNhan.dsPTCustomers || []);
         setLichTapList(lichCaNhan.dsPTSchedules || []);
         setCaTapList(lichCaNhan.dsCaTap || []);
         setKhuVucList(lichCaNhan.dsKhuVuc || []);
-        
+
         // Debug: kiểm tra sau khi set
         console.log('After set - caTapList:', lichCaNhan.dsCaTap?.length || 0, 'items');
         console.log('After set - khuVucList:', lichCaNhan.dsKhuVuc?.length || 0, 'items');
@@ -109,7 +116,7 @@ const TrainerHome = () => {
         const lichLop = await trainerService.getLichLop();
         const dsLop = lichLop.dsLop || [];
         setLopList(dsLop);
-        
+
         // Extract unique bộ môn từ danh sách lớp
         const boMonSet = new Map();
         dsLop.forEach(lop => {
@@ -146,6 +153,12 @@ const TrainerHome = () => {
     }
   };
 
+  const toggleDarkMode = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    localStorage.setItem('darkMode', newMode.toString());
+  };
+
   const openAddModal = (khachHang = null) => {
     // Nếu có thông tin khách hàng, lấy ngày bắt đầu từ đó
     let defaultNgayBD = '';
@@ -154,7 +167,7 @@ const TrainerHome = () => {
       const date = new Date(khachHang.ngayBD);
       defaultNgayBD = date.toISOString().split('T')[0];
     }
-    
+
     setFormData({
       maKH: khachHang?.maKH || '',
       tenKH: khachHang?.hoTen || khachHang?.tenKH || '',
@@ -173,9 +186,9 @@ const TrainerHome = () => {
       const newThuTap = prev.thuTap.includes(dayValue)
         ? prev.thuTap.filter(d => d !== dayValue)
         : [...prev.thuTap, dayValue].sort((a, b) => {
-            const order = ['2', '3', '4', '5', '6', '7', 'CN'];
-            return order.indexOf(a) - order.indexOf(b);
-          });
+          const order = ['2', '3', '4', '5', '6', '7', 'CN'];
+          return order.indexOf(a) - order.indexOf(b);
+        });
       return { ...prev, thuTap: newThuTap };
     });
   };
@@ -209,31 +222,31 @@ const TrainerHome = () => {
   const getMonthDays = () => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    
+
     // Ngày đầu tiên của tháng
     const firstDay = new Date(year, month, 1);
     // Ngày cuối cùng của tháng
     const lastDay = new Date(year, month + 1, 0);
-    
+
     // Xác định ngày bắt đầu calendar (Thứ 2 đầu tiên)
     let startDate = new Date(firstDay);
     const firstDayOfWeek = firstDay.getDay();
     // Lùi về thứ 2 (0=CN, 1=T2, ...)
     const daysToSubtract = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
     startDate.setDate(startDate.getDate() - daysToSubtract);
-    
+
     const days = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     // Luôn tạo 6 tuần (42 ngày) để calendar đồng nhất
     for (let i = 0; i < 42; i++) {
       const date = new Date(startDate);
       date.setDate(startDate.getDate() + i);
-      
+
       const dayOfWeek = date.getDay();
       const dayValue = dayOfWeek === 0 ? 'CN' : String(dayOfWeek + 1);
-      
+
       days.push({
         date,
         day: date.getDate(),
@@ -243,7 +256,7 @@ const TrainerHome = () => {
         dateStr: date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
       });
     }
-    
+
     return days;
   };
 
@@ -271,36 +284,36 @@ const TrainerHome = () => {
     return lichTapList.filter(lt => {
       // Không hiển thị lịch đã hủy (backend trả về "Huy")
       if (lt.trangThai === 'Huy' || lt.trangThai === 'DaHuy') return false;
-      
+
       const thuStr = lt.thu || lt.ngayTap || '';
       const thuArr = parseThuString(thuStr);
-      
+
       // Kiểm tra thứ có khớp không
       if (!thuArr.includes(dayValue)) return false;
-      
+
       // Nếu có ngày cụ thể, thực hiện các kiểm tra bổ sung
       if (dateObj) {
         const checkDate = new Date(dateObj);
         checkDate.setHours(12, 0, 0, 0);
-        
+
         // Tìm thông tin khách hàng để lấy thời hạn PT
-        const kh = khachHangChiTiet.find(k => k.maKH === lt.maKH) || 
-                   khachHangList.find(k => k.maKH === lt.maKH);
-        
+        const kh = khachHangChiTiet.find(k => k.maKH === lt.maKH) ||
+          khachHangList.find(k => k.maKH === lt.maKH);
+
         if (kh) {
           const ngayBD = kh.ngayBD ? new Date(kh.ngayBD) : null;
           const ngayKT = kh.ngayKT ? new Date(kh.ngayKT) : null;
-          
+
           // Set hours to 0 for accurate date comparison
           if (ngayBD) ngayBD.setHours(0, 0, 0, 0);
           if (ngayKT) ngayKT.setHours(23, 59, 59, 999);
-          
+
           // Kiểm tra ngày có nằm trong thời hạn PT không
           if (ngayBD && checkDate < ngayBD) return false;
           if (ngayKT && checkDate > ngayKT) return false;
         }
       }
-      
+
       return true;
     });
   };
@@ -328,14 +341,14 @@ const TrainerHome = () => {
     if (!kh) {
       kh = khachHangList.find(k => k.maKH === maKH);
     }
-    
+
     // Lấy ngày bắt đầu từ thông tin khách hàng
     let ngayBD = '';
     if (kh?.ngayBD) {
       const date = new Date(kh.ngayBD);
       ngayBD = date.toISOString().split('T')[0]; // Format yyyy-mm-dd
     }
-    
+
     setFormData({
       ...formData,
       maKH: maKH,
@@ -377,11 +390,11 @@ const TrainerHome = () => {
   // Xử lý HỦY lịch tập - Gọi API backend
   const handleHuyLichTap = async () => {
     if (!selectedEvent?.maLT) return;
-    
+
     const confirmed = window.confirm(
       `⚠️ CẢNH BÁO: Bạn có chắc muốn HỦY lịch tập của khách hàng "${selectedEvent.tenKhachHang || selectedEvent.hoTenKH}"?\n\nThao tác này không thể hoàn tác!`
     );
-    
+
     if (!confirmed) return;
 
     setActionLoading(true);
@@ -389,12 +402,12 @@ const TrainerHome = () => {
       // Gọi API backend để hủy lịch
       const result = await trainerService.huyLichPT(selectedEvent.maLT);
       console.log('Kết quả hủy lịch:', result);
-      
+
       // Kiểm tra response - backend có thể trả về success=true hoặc không có lỗi = thành công
       if (result.success === true || result.maLT || result.message?.includes('thành công')) {
         // Xóa lịch khỏi state để cập nhật lưới ngay lập tức
         setLichTapList(prev => prev.filter(lt => lt.maLT !== selectedEvent.maLT));
-        
+
         setShowEventModal(false);
         setSuccessMsg('✅ Đã hủy lịch tập thành công! Lưới đã được cập nhật.');
         setTimeout(() => setSuccessMsg(''), 3000);
@@ -433,7 +446,7 @@ const TrainerHome = () => {
     const ngayTapDate = new Date(formData.ngayBatDau);
     const dayOfWeek = ngayTapDate.getDay();
     const thuValue = dayOfWeek === 0 ? 'CN' : String(dayOfWeek + 1);
-    
+
     const existingSchedule = lichTapList.find(lt => {
       // Kiểm tra cùng khách hàng, cùng ca, và cùng thứ trong tuần
       const ltThuArr = parseThuString(lt.thu || '');
@@ -441,7 +454,7 @@ const TrainerHome = () => {
       const isSameCa = lt.maCa === formData.caTap;
       const isSameThu = ltThuArr.includes(thuValue);
       const isActive = lt.trangThai !== 'Huy' && lt.trangThai !== 'DaHuy';
-      
+
       return isSameCustomer && isSameCa && isSameThu && isActive;
     });
 
@@ -455,7 +468,7 @@ const TrainerHome = () => {
     try {
       setSubmitting(true);
       setError('');
-      
+
       const result = await trainerService.taoLichPT({
         maKH: formData.maKH,
         ngayTap: formData.ngayBatDau, // Backend mong đợi "ngayTap" dạng yyyy-MM-dd
@@ -516,7 +529,7 @@ const TrainerHome = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-orange-50">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)' }}>
         <div className="text-center">
           <Dumbbell className="w-12 h-12 text-primary animate-bounce mx-auto mb-4" />
           <p className="text-gray-600">Đang tải dữ liệu...</p>
@@ -525,17 +538,25 @@ const TrainerHome = () => {
     );
   }
 
-    return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50">
+  return (
+    <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'dark' : ''}`} style={{
+      background: isDarkMode
+        ? 'linear-gradient(to bottom right, #1F2937, #111827, #1F2937)'
+        : 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)'
+    }}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+      <div className={`${isDarkMode ? 'bg-gradient-to-r from-gray-800 via-gray-850 to-gray-900' : 'bg-gradient-to-r from-orange-500 via-orange-550 to-orange-600'} text-white shadow-lg`} style={{
+        background: isDarkMode
+          ? 'linear-gradient(135deg, #1F2937 0%, #111827 50%, #0F172A 100%)'
+          : 'linear-gradient(135deg, #F97316 0%, #EA580C 50%, #DC2626 100%)'
+      }}>
         <div className="max-w-7xl mx-auto px-6 py-6">
-<div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
                 <User className="w-8 h-8" />
               </div>
-            <div>
+              <div>
                 {/* Dòng chào + Chuyên môn trên cùng một dòng */}
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="text-sm text-orange-100">Xin chào, Huấn luyện viên</span>
@@ -546,49 +567,59 @@ const TrainerHome = () => {
                         <Award className="w-4 h-4 text-orange-200" />
                         <span className="text-sm text-orange-100">Chuyên môn:</span>
                         {boMonList.map((bm) => (
-                          <span 
-                            key={bm.maBM} 
+                          <span
+                            key={bm.maBM}
                             className="px-2 py-0.5 bg-white/20 rounded-full text-xs font-medium"
                           >
                             {bm.tenBM}
                           </span>
                         ))}
-            </div>
+                      </div>
                     </>
                   )}
-          </div>
+                </div>
                 <h1 className="text-2xl font-extrabold mt-1">{trainerInfo?.hoTen || trainerInfo?.tenNV || 'Trainer'}</h1>
                 <div className="text-sm text-orange-200 mt-1">Mã HLV: {maNV || trainerInfo?.trainerId || trainerInfo?.maNV || '-'}</div>
-        </div>
-      </div>
-          <button
-            onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 rounded-xl hover:bg-white/30 transition-all"
-          >
-            <LogOut className="w-4 h-4" />
-            Đăng xuất
-          </button>
-        </div>
-        
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Dark Mode Toggle */}
+              <button
+                onClick={toggleDarkMode}
+                className={`flex items-center justify-center w-11 h-11 ${isDarkMode ? 'bg-white/10 hover:bg-white/15' : 'bg-white/15 hover:bg-white/20'} rounded-xl transition-all backdrop-blur-sm shadow-md`}
+                title={isDarkMode ? 'Chế độ sáng' : 'Chế độ tối'}
+              >
+                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+              <button
+                onClick={handleLogout}
+                className={`flex items-center gap-2 px-4 py-2 ${isDarkMode ? 'bg-white/10 hover:bg-white/15' : 'bg-white/15 hover:bg-white/20'} rounded-xl transition-all backdrop-blur-sm shadow-md`}
+              >
+                <LogOut className="w-4 h-4" />
+                Đăng xuất
+              </button>
+            </div>
+          </div>
+
           {/* Stats */}
           <div className="grid grid-cols-4 gap-4 mt-6">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold">{lichTapList.length}</div>
-              <div className="text-sm text-orange-100">Lịch PT</div>
+            <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/20 border-white/30'} backdrop-blur-xl rounded-2xl p-5 text-center border shadow-xl`}>
+              <div className="text-4xl font-extrabold tracking-tight">{lichTapList.length}</div>
+              <div className={`text-sm mt-2 font-medium ${isDarkMode ? 'text-gray-200' : 'text-white/90'}`}>Lịch PT</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold">{khachHangList.length}</div>
-              <div className="text-sm text-orange-100">Khách hàng PT</div>
+            <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/20 border-white/30'} backdrop-blur-xl rounded-2xl p-5 text-center border shadow-xl`}>
+              <div className="text-4xl font-extrabold tracking-tight">{khachHangList.length}</div>
+              <div className={`text-sm mt-2 font-medium ${isDarkMode ? 'text-gray-200' : 'text-white/90'}`}>Khách hàng PT</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold">{lopList.length}</div>
-              <div className="text-sm text-orange-100">Lớp phụ trách</div>
+            <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/20 border-white/30'} backdrop-blur-xl rounded-2xl p-5 text-center border shadow-xl`}>
+              <div className="text-4xl font-extrabold tracking-tight">{lopList.length}</div>
+              <div className={`text-sm mt-2 font-medium ${isDarkMode ? 'text-gray-200' : 'text-white/90'}`}>Lớp phụ trách</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold">
+            <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/20 border-white/30'} backdrop-blur-xl rounded-2xl p-5 text-center border shadow-xl`}>
+              <div className="text-4xl font-extrabold tracking-tight">
                 {lichTapList.filter(lt => lt.trangThai?.toLowerCase().includes('mo')).length}
               </div>
-              <div className="text-sm text-orange-100">Đang hoạt động</div>
+              <div className={`text-sm mt-2 font-medium ${isDarkMode ? 'text-gray-200' : 'text-white/90'}`}>Đang hoạt động</div>
             </div>
           </div>
 
@@ -604,19 +635,25 @@ const TrainerHome = () => {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-t-xl font-medium transition-all ${
-                    activeTab === tab.key
-                      ? 'bg-white text-orange-600 shadow-lg'
+                  className={`flex items-center gap-2 px-4 py-2 rounded-t-xl font-medium transition-all ${activeTab === tab.key
+                    ? isDarkMode
+                      ? 'bg-gray-800 text-orange-400 shadow-lg'
+                      : 'bg-white text-orange-600 shadow-lg'
+                    : isDarkMode
+                      ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
                       : 'bg-white/20 text-white hover:bg-white/30'
-                  }`}
+                    }`}
                 >
                   <TabIcon className="w-4 h-4" />
                   {tab.label}
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${
-                    activeTab === tab.key ? 'bg-orange-100 text-orange-600' : 'bg-white/20'
-                  }`}>
-                    {tab.count}
-                  </span>
+                  {tab.count !== undefined && (
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === tab.key
+                      ? isDarkMode ? 'bg-orange-900 text-orange-300' : 'bg-orange-100 text-orange-600'
+                      : isDarkMode ? 'bg-gray-600' : 'bg-white/20'
+                      }`}>
+                      {tab.count}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -627,23 +664,23 @@ const TrainerHome = () => {
       {/* Alerts */}
       <div className="max-w-7xl mx-auto px-6 mt-4 space-y-2">
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
+          <div className={`${isDarkMode ? 'bg-red-900/20 border-red-500/50' : 'bg-red-50 border-red-500'} border-l-4 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between`}>
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5" />
-              {error}
+              <span className={isDarkMode ? 'text-red-400' : 'text-red-700'}>{error}</span>
             </div>
-            <button onClick={() => setError('')} className="text-red-500 hover:text-red-700">
+            <button onClick={() => setError('')} className={`${isDarkMode ? 'text-red-400 hover:text-red-300' : 'text-red-500 hover:text-red-700'}`}>
               <X className="w-5 h-5" />
             </button>
           </div>
         )}
         {successMsg && (
-          <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg flex items-center justify-between">
+          <div className={`${isDarkMode ? 'bg-green-900/20 border-green-500/50' : 'bg-green-50 border-green-500'} border-l-4 text-green-700 px-4 py-3 rounded-lg flex items-center justify-between`}>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
-              {successMsg}
+              <span className={isDarkMode ? 'text-green-400' : 'text-green-700'}>{successMsg}</span>
             </div>
-            <button onClick={() => setSuccessMsg('')} className="text-green-500 hover:text-green-700">
+            <button onClick={() => setSuccessMsg('')} className={`${isDarkMode ? 'text-green-400 hover:text-green-300' : 'text-green-500 hover:text-green-700'}`}>
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -687,7 +724,7 @@ const TrainerHome = () => {
                 <ChevronLeft className="w-5 h-5" />
                 Tháng trước
               </button>
-              
+
               <div className="flex items-center gap-3">
                 <button
                   onClick={goToCurrentMonth}
@@ -699,7 +736,7 @@ const TrainerHome = () => {
                   {getMonthName()}
                 </span>
               </div>
-              
+
               <button
                 onClick={goToNextMonth}
                 className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:text-primary hover:bg-white rounded-lg transition-all"
@@ -715,7 +752,7 @@ const TrainerHome = () => {
                 {/* Header Row - Các ngày trong tuần */}
                 <div className="grid grid-cols-7 gap-1 mb-2">
                   {DAYS_OF_WEEK.map(day => (
-                    <div 
+                    <div
                       key={day.value}
                       className="p-2 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg text-center"
                     >
@@ -732,33 +769,30 @@ const TrainerHome = () => {
                     const hasSchedules = schedulesForDay.length > 0;
 
                     return (
-                      <div 
+                      <div
                         key={idx}
-                        className={`min-h-[100px] p-2 rounded-lg border transition-all ${
-                          !day.isCurrentMonth 
-                            ? 'bg-gray-100/50 border-gray-100 opacity-50' 
-                            : day.isToday 
-                              ? 'bg-orange-50 border-orange-400 border-2 shadow-md' 
-                              : hasSchedules 
-                                ? 'bg-orange-50/50 border-orange-200' 
-                                : 'bg-white border-gray-200 hover:border-orange-200'
-                        }`}
+                        className={`min-h-[100px] p-2 rounded-lg border transition-all ${!day.isCurrentMonth
+                          ? 'bg-gray-100/50 border-gray-100 opacity-50'
+                          : day.isToday
+                            ? 'bg-orange-50 border-orange-400 border-2 shadow-md'
+                            : hasSchedules
+                              ? 'bg-orange-50/50 border-orange-200'
+                              : 'bg-white border-gray-200 hover:border-orange-200'
+                          }`}
                       >
                         {/* Số ngày */}
-                        <div className={`text-right mb-1 ${
-                          !day.isCurrentMonth 
-                            ? 'text-gray-400' 
-                            : day.isToday 
-                              ? 'text-orange-600 font-bold' 
-                              : 'text-gray-600'
-                        }`}>
-                          <span className={`inline-block w-6 h-6 leading-6 text-center rounded-full text-sm ${
-                            day.isToday ? 'bg-orange-500 text-white' : ''
+                        <div className={`text-right mb-1 ${!day.isCurrentMonth
+                          ? 'text-gray-400'
+                          : day.isToday
+                            ? 'text-orange-600 font-bold'
+                            : 'text-gray-600'
                           }`}>
+                          <span className={`inline-block w-6 h-6 leading-6 text-center rounded-full text-sm ${day.isToday ? 'bg-orange-500 text-white' : ''
+                            }`}>
                             {day.day}
                           </span>
                         </div>
-                        
+
                         {/* Events */}
                         {hasSchedules && day.isCurrentMonth && (
                           <div className="space-y-1">
@@ -852,13 +886,12 @@ const TrainerHome = () => {
                   const daysLeft = ngayKT ? Math.ceil((ngayKT - today) / (1000 * 60 * 60 * 24)) : null;
 
                   return (
-                    <div 
+                    <div
                       key={kh.maCTDK || kh.maKH || idx}
-                      className={`border-2 rounded-xl p-5 hover:shadow-md transition-all ${
-                        isExpired ? 'border-red-200 bg-red-50' : 
-                        isActive && daysLeft <= 7 ? 'border-yellow-200 bg-yellow-50' : 
-                        'border-gray-100'
-                      }`}
+                      className={`border-2 rounded-xl p-5 hover:shadow-md transition-all ${isExpired ? 'border-red-200 bg-red-50' :
+                        isActive && daysLeft <= 7 ? 'border-yellow-200 bg-yellow-50' :
+                          'border-gray-100'
+                        }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-4">
@@ -869,14 +902,13 @@ const TrainerHome = () => {
                             <div className="flex items-center gap-3 flex-wrap">
                               <h3 className="font-bold text-gray-800 text-lg">{kh.tenKH || kh.hoTen || 'Khách hàng'}</h3>
                               <span className="text-sm text-gray-500">({kh.maKH})</span>
-                              
+
                               {/* Trạng thái hóa đơn */}
                               {kh.trangThaiHD && (
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                                  kh.trangThaiHD === 'DaThanhToan' 
-                                    ? 'bg-green-100 text-green-700' 
-                                    : 'bg-yellow-100 text-yellow-700'
-                                }`}>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${kh.trangThaiHD === 'DaThanhToan'
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-yellow-100 text-yellow-700'
+                                  }`}>
                                   {kh.trangThaiHD === 'DaThanhToan' ? '✓ Đã thanh toán' : '⏳ Chờ thanh toán'}
                                 </span>
                               )}
@@ -905,17 +937,16 @@ const TrainerHome = () => {
                                     <strong>Đến:</strong> {kh.ngayKT ? new Date(kh.ngayKT).toLocaleDateString('vi-VN') : '-'}
                                   </span>
                                 </div>
-                                
+
                                 {/* Badge còn lại */}
                                 {daysLeft !== null && (
-                                  <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
-                                    isExpired ? 'bg-red-500 text-white' :
+                                  <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${isExpired ? 'bg-red-500 text-white' :
                                     daysLeft <= 7 ? 'bg-yellow-500 text-white' :
-                                    'bg-green-500 text-white'
-                                  }`}>
-                                    {isExpired 
-                                      ? '⚠️ Hết hạn' 
-                                      : daysLeft === 0 
+                                      'bg-green-500 text-white'
+                                    }`}>
+                                    {isExpired
+                                      ? '⚠️ Hết hạn'
+                                      : daysLeft === 0
                                         ? 'Hôm nay hết hạn'
                                         : `Còn ${daysLeft} ngày`
                                     }
@@ -991,7 +1022,7 @@ const TrainerHome = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {lopList.map((lop, idx) => (
-                  <div 
+                  <div
                     key={lop.maLop || idx}
                     className="border rounded-xl p-4 hover:shadow-md transition-all"
                   >
@@ -1003,11 +1034,10 @@ const TrainerHome = () => {
                           <div className="text-sm text-blue-600 mt-1">Bộ môn: {lop.boMon.tenBM}</div>
                         )}
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        lop.tinhTrangLop === 'ChuaDay' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${lop.tinhTrangLop === 'ChuaDay'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                        }`}>
                         {lop.tinhTrangLop === 'ChuaDay' ? 'Còn chỗ' : 'Đã đầy'}
                       </span>
                     </div>
@@ -1025,406 +1055,409 @@ const TrainerHome = () => {
       </div>
 
       {/* Add Modal - Thêm lịch tập PT */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b sticky top-0 bg-white rounded-t-2xl">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                  <Plus className="w-6 h-6 text-primary" />
-                  Thêm Lịch tập PT
-                </h2>
-                <button 
-                  onClick={() => setShowAddModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-all"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
+      {
+        showAddModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b sticky top-0 bg-white rounded-t-2xl">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <Plus className="w-6 h-6 text-primary" />
+                    Thêm Lịch tập PT
+                  </h2>
+                  <button
+                    onClick={() => setShowAddModal(false)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-all"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
               </div>
-            </div>
-            
-            <div className="p-6 space-y-5">
-              {/* Mã Khách hàng - Dropdown */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Khách hàng <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.maKH}
-                  onChange={(e) => handleSelectKhachHang(e.target.value)}
-                  className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                >
-                  <option value="">-- Chọn khách hàng --</option>
-                  {getKhachHangOptions().map(kh => (
-                    <option key={kh.maCTDK || kh.maKH} value={kh.maKH}>
-                      {kh.maKH} - {kh.tenKH || kh.hoTen} {kh.tenDV ? `(${kh.tenDV})` : ''}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">Chọn khách hàng đã đăng ký dịch vụ PT với bạn</p>
-                
-                {/* Hiển thị thông tin chi tiết khi đã chọn */}
-                {formData.maKH && (
-                  <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                    {(() => {
-                      const selectedKH = getKhachHangOptions().find(k => k.maKH === formData.maKH);
-                      if (!selectedKH) return null;
+
+              <div className="p-6 space-y-5">
+                {/* Mã Khách hàng - Dropdown */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Khách hàng <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.maKH}
+                    onChange={(e) => handleSelectKhachHang(e.target.value)}
+                    className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                  >
+                    <option value="">-- Chọn khách hàng --</option>
+                    {getKhachHangOptions().map(kh => (
+                      <option key={kh.maCTDK || kh.maKH} value={kh.maKH}>
+                        {kh.maKH} - {kh.tenKH || kh.hoTen} {kh.tenDV ? `(${kh.tenDV})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Chọn khách hàng đã đăng ký dịch vụ PT với bạn</p>
+
+                  {/* Hiển thị thông tin chi tiết khi đã chọn */}
+                  {formData.maKH && (
+                    <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                      {(() => {
+                        const selectedKH = getKhachHangOptions().find(k => k.maKH === formData.maKH);
+                        if (!selectedKH) return null;
+                        return (
+                          <div className="space-y-1 text-sm">
+                            {selectedKH.tenDV && (
+                              <div className="flex items-center gap-2">
+                                <BookOpen className="w-4 h-4 text-primary" />
+                                <span className="text-gray-700"><strong>Dịch vụ:</strong> {selectedKH.tenDV}</span>
+                              </div>
+                            )}
+                            {(selectedKH.ngayBD || selectedKH.ngayKT) && (
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-primary" />
+                                <span className="text-gray-700">
+                                  <strong>Thời hạn:</strong> {selectedKH.ngayBD ? new Date(selectedKH.ngayBD).toLocaleDateString('vi-VN') : '-'} → {selectedKH.ngayKT ? new Date(selectedKH.ngayKT).toLocaleDateString('vi-VN') : '-'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Tên Khách hàng - Text Input */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Tên Khách hàng
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.tenKH}
+                    onChange={(e) => setFormData({ ...formData, tenKH: e.target.value })}
+                    className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                    placeholder="Nhập tên khách hàng (tự động điền khi chọn)"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Tự động điền khi chọn khách hàng hoặc bạn có thể nhập thủ công</p>
+                </div>
+
+                {/* Ngày tập - Date Picker (Backend yêu cầu ngày cụ thể) */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Ngày tập <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.ngayBatDau}
+                    onChange={(e) => {
+                      const selectedDate = e.target.value;
+                      // Tự động xác định thứ từ ngày đã chọn
+                      if (selectedDate) {
+                        const date = new Date(selectedDate);
+                        const dayOfWeek = date.getDay();
+                        const thuValue = dayOfWeek === 0 ? 'CN' : String(dayOfWeek + 1);
+                        setFormData({
+                          ...formData,
+                          ngayBatDau: selectedDate,
+                          thuTap: [thuValue] // Tự động set thứ tương ứng
+                        });
+                      } else {
+                        setFormData({ ...formData, ngayBatDau: selectedDate, thuTap: [] });
+                      }
+                    }}
+                    className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Chọn ngày cụ thể khách hàng sẽ tập. Ngày phải nằm trong thời hạn đăng ký PT.
+                  </p>
+
+                  {/* Hiển thị thứ của ngày đã chọn */}
+                  {formData.ngayBatDau && formData.thuTap.length > 0 && (
+                    <div className="mt-2 p-2 bg-orange-50 rounded-lg border border-orange-200 text-xs text-orange-700">
+                      <strong>Thứ:</strong> {formData.thuTap.map(d => DAYS_OF_WEEK.find(day => day.value === d)?.fullLabel).join(', ')}
+                    </div>
+                  )}
+
+                  {/* Hiển thị thời hạn PT của khách hàng đã chọn */}
+                  {formData.maKH && (() => {
+                    const kh = getKhachHangOptions().find(k => k.maKH === formData.maKH);
+                    if (kh?.ngayBD || kh?.ngayKT) {
                       return (
-                        <div className="space-y-1 text-sm">
-                          {selectedKH.tenDV && (
-                            <div className="flex items-center gap-2">
-                              <BookOpen className="w-4 h-4 text-primary" />
-                              <span className="text-gray-700"><strong>Dịch vụ:</strong> {selectedKH.tenDV}</span>
-                            </div>
-                          )}
-                          {(selectedKH.ngayBD || selectedKH.ngayKT) && (
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-primary" />
-                              <span className="text-gray-700">
-                                <strong>Thời hạn:</strong> {selectedKH.ngayBD ? new Date(selectedKH.ngayBD).toLocaleDateString('vi-VN') : '-'} → {selectedKH.ngayKT ? new Date(selectedKH.ngayKT).toLocaleDateString('vi-VN') : '-'}
-                              </span>
-                            </div>
-                          )}
+                        <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200 text-xs text-blue-700">
+                          <strong>Thời hạn PT:</strong> {kh.ngayBD ? new Date(kh.ngayBD).toLocaleDateString('vi-VN') : '?'} → {kh.ngayKT ? new Date(kh.ngayKT).toLocaleDateString('vi-VN') : '?'}
                         </div>
                       );
-                    })()}
-                  </div>
-                )}
-              </div>
-
-              {/* Tên Khách hàng - Text Input */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Tên Khách hàng
-                </label>
-                <input
-                  type="text"
-                  value={formData.tenKH}
-                  onChange={(e) => setFormData({ ...formData, tenKH: e.target.value })}
-                  className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                  placeholder="Nhập tên khách hàng (tự động điền khi chọn)"
-                />
-                <p className="text-xs text-gray-500 mt-1">Tự động điền khi chọn khách hàng hoặc bạn có thể nhập thủ công</p>
-              </div>
-
-              {/* Ngày tập - Date Picker (Backend yêu cầu ngày cụ thể) */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Ngày tập <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={formData.ngayBatDau}
-                  onChange={(e) => {
-                    const selectedDate = e.target.value;
-                    // Tự động xác định thứ từ ngày đã chọn
-                    if (selectedDate) {
-                      const date = new Date(selectedDate);
-                      const dayOfWeek = date.getDay();
-                      const thuValue = dayOfWeek === 0 ? 'CN' : String(dayOfWeek + 1);
-                      setFormData({ 
-                        ...formData, 
-                        ngayBatDau: selectedDate,
-                        thuTap: [thuValue] // Tự động set thứ tương ứng
-                      });
-                    } else {
-                      setFormData({ ...formData, ngayBatDau: selectedDate, thuTap: [] });
                     }
-                  }}
-                  className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Chọn ngày cụ thể khách hàng sẽ tập. Ngày phải nằm trong thời hạn đăng ký PT.
-                </p>
-                
-                {/* Hiển thị thứ của ngày đã chọn */}
-                {formData.ngayBatDau && formData.thuTap.length > 0 && (
-                  <div className="mt-2 p-2 bg-orange-50 rounded-lg border border-orange-200 text-xs text-orange-700">
-                    <strong>Thứ:</strong> {formData.thuTap.map(d => DAYS_OF_WEEK.find(day => day.value === d)?.fullLabel).join(', ')}
-                  </div>
-                )}
-                
-                {/* Hiển thị thời hạn PT của khách hàng đã chọn */}
-                {formData.maKH && (() => {
-                  const kh = getKhachHangOptions().find(k => k.maKH === formData.maKH);
-                  if (kh?.ngayBD || kh?.ngayKT) {
-                    return (
-                      <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200 text-xs text-blue-700">
-                        <strong>Thời hạn PT:</strong> {kh.ngayBD ? new Date(kh.ngayBD).toLocaleDateString('vi-VN') : '?'} → {kh.ngayKT ? new Date(kh.ngayKT).toLocaleDateString('vi-VN') : '?'}
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-              </div>
+                    return null;
+                  })()}
+                </div>
 
-              {/* Thứ tập trong tuần - Bắt buộc để hiển thị trên lưới */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Thứ tập trong tuần <span className="text-red-500">*</span>
-                </label>
-                <p className="text-xs text-gray-500 mb-3">
-                  Chọn các thứ trong tuần khách hàng sẽ tập (tự động chọn khi chọn ngày, hoặc chọn thủ công)
-                </p>
-                <div className="grid grid-cols-7 gap-2">
-                  {DAYS_OF_WEEK.map(day => (
-                    <button
-                      key={day.value}
-                      type="button"
-                      onClick={() => toggleDaySelection(day.value)}
-                      className={`p-3 rounded-xl border-2 text-center transition-all ${
-                        formData.thuTap.includes(day.value)
+                {/* Thứ tập trong tuần - Bắt buộc để hiển thị trên lưới */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Thứ tập trong tuần <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Chọn các thứ trong tuần khách hàng sẽ tập (tự động chọn khi chọn ngày, hoặc chọn thủ công)
+                  </p>
+                  <div className="grid grid-cols-7 gap-2">
+                    {DAYS_OF_WEEK.map(day => (
+                      <button
+                        key={day.value}
+                        type="button"
+                        onClick={() => toggleDaySelection(day.value)}
+                        className={`p-3 rounded-xl border-2 text-center transition-all ${formData.thuTap.includes(day.value)
                           ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white border-orange-500 shadow-lg transform scale-105'
                           : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-orange-300 hover:bg-orange-50'
-                      }`}
-                    >
-                      <div className="font-bold text-lg">{day.label}</div>
-                      <div className={`text-xs ${formData.thuTap.includes(day.value) ? 'text-orange-100' : 'text-gray-500'}`}>
-                        {day.fullLabel}
+                          }`}
+                      >
+                        <div className="font-bold text-lg">{day.label}</div>
+                        <div className={`text-xs ${formData.thuTap.includes(day.value) ? 'text-orange-100' : 'text-gray-500'}`}>
+                          {day.fullLabel}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Hiển thị các ngày đã chọn */}
+                  {formData.thuTap.length > 0 && (
+                    <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2 text-sm text-green-700">
+                        <CheckCircle className="w-4 h-4" />
+                        <span>
+                          <strong>Đã chọn:</strong> {formData.thuTap.map(d => DAYS_OF_WEEK.find(day => day.value === d)?.fullLabel).join(', ')}
+                        </span>
                       </div>
-                    </button>
-                  ))}
-                </div>
-                
-                {/* Hiển thị các ngày đã chọn */}
-                {formData.thuTap.length > 0 && (
-                  <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-2 text-sm text-green-700">
-                      <CheckCircle className="w-4 h-4" />
-                      <span>
-                        <strong>Đã chọn:</strong> {formData.thuTap.map(d => DAYS_OF_WEEK.find(day => day.value === d)?.fullLabel).join(', ')}
-                      </span>
+                      <div className="text-xs text-green-600 mt-1">
+                        Mã thứ: "<strong>{getThuTapString()}</strong>" (dùng để hiển thị trên lưới)
+                      </div>
                     </div>
-                    <div className="text-xs text-green-600 mt-1">
-                      Mã thứ: "<strong>{getThuTapString()}</strong>" (dùng để hiển thị trên lưới)
+                  )}
+                </div>
+
+                {/* Ca tập - Dropdown */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Ca tập <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.caTap}
+                    onChange={(e) => setFormData({ ...formData, caTap: e.target.value })}
+                    className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                  >
+                    <option value="">-- Chọn ca tập --</option>
+                    {caTapList.map(ca => (
+                      <option key={ca.maCa} value={ca.maCa}>
+                        {ca.tenCa} - {ca.moTa}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Khu vực - Dropdown */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Khu vực <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.maKV}
+                    onChange={(e) => setFormData({ ...formData, maKV: e.target.value })}
+                    className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                  >
+                    <option value="">-- Chọn khu vực --</option>
+                    {khuVucList.map(kv => (
+                      <option key={kv.maKV} value={kv.maKV}>
+                        {kv.tenKhuVuc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Conflict Warning */}
+                {conflictWarning && (
+                  <div className="flex items-start gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                    <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold text-yellow-800">Cảnh báo xung đột lịch</div>
+                      <div className="text-sm text-yellow-700 mt-1">
+                        Bạn đã có lịch tập vào ngày và ca này. Vui lòng chọn thời gian khác hoặc xác nhận để tiếp tục.
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Ca tập - Dropdown */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Ca tập <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.caTap}
-                  onChange={(e) => setFormData({ ...formData, caTap: e.target.value })}
-                  className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+              <div className="p-6 border-t flex justify-end gap-3 sticky bottom-0 bg-white rounded-b-2xl">
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="px-6 py-2.5 border-2 rounded-xl text-gray-600 hover:bg-gray-50 transition-all font-medium"
                 >
-                  <option value="">-- Chọn ca tập --</option>
-                  {caTapList.map(ca => (
-                    <option key={ca.maCa} value={ca.maCa}>
-                      {ca.tenCa} - {ca.moTa}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Khu vực - Dropdown */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Khu vực <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.maKV}
-                  onChange={(e) => setFormData({ ...formData, maKV: e.target.value })}
-                  className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                  Hủy
+                </button>
+                <button
+                  onClick={handleAddLichTap}
+                  disabled={submitting || !formData.maKH || !formData.ngayBatDau || formData.thuTap.length === 0 || !formData.caTap || !formData.maKV}
+                  className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  <option value="">-- Chọn khu vực --</option>
-                  {khuVucList.map(kv => (
-                    <option key={kv.maKV} value={kv.maKV}>
-                      {kv.tenKhuVuc}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Conflict Warning */}
-              {conflictWarning && (
-                <div className="flex items-start gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-                  <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-semibold text-yellow-800">Cảnh báo xung đột lịch</div>
-                    <div className="text-sm text-yellow-700 mt-1">
-                      Bạn đã có lịch tập vào ngày và ca này. Vui lòng chọn thời gian khác hoặc xác nhận để tiếp tục.
+                  {submitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Tạo lịch tập
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
-            
-            <div className="p-6 border-t flex justify-end gap-3 sticky bottom-0 bg-white rounded-b-2xl">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-6 py-2.5 border-2 rounded-xl text-gray-600 hover:bg-gray-50 transition-all font-medium"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleAddLichTap}
-                disabled={submitting || !formData.maKH || !formData.ngayBatDau || formData.thuTap.length === 0 || !formData.caTap || !formData.maKV}
-                className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {submitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Đang xử lý...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    Tạo lịch tập
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Event Detail Modal - Hiển thị chi tiết ca tập khi click vào sự kiện */}
-      {showEventModal && selectedEvent && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            {/* Header */}
-            <div className="p-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold flex items-center gap-2">
-                  <CalendarDays className="w-5 h-5" />
-                  Chi tiết lịch tập PT
-                </h2>
-                <button 
-                  onClick={() => setShowEventModal(false)}
-                  className="p-1 hover:bg-white/20 rounded-lg transition-all"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            
-            {/* Content */}
-            <div className="p-5 space-y-4">
-              {/* Thông tin khách hàng */}
-              <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-xl">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <div className="font-bold text-gray-800 text-lg">
-                    {selectedEvent.tenKhachHang || selectedEvent.hoTenKH || 'Khách hàng'}
-                  </div>
-                  <div className="text-sm text-gray-500">Mã KH: {selectedEvent.maKH}</div>
+      {
+        showEventModal && selectedEvent && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+              {/* Header */}
+              <div className="p-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <CalendarDays className="w-5 h-5" />
+                    Chi tiết lịch tập PT
+                  </h2>
+                  <button
+                    onClick={() => setShowEventModal(false)}
+                    className="p-1 hover:bg-white/20 rounded-lg transition-all"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
 
-              {/* Ngày tập trong tuần */}
-              <div className="space-y-2">
-                <div className="text-sm font-semibold text-gray-600 flex items-center gap-2">
-                  <CalendarDays className="w-4 h-4" />
-                  Ngày tập trong tuần
+              {/* Content */}
+              <div className="p-5 space-y-4">
+                {/* Thông tin khách hàng */}
+                <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-xl">
+                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
+                    <User className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-gray-800 text-lg">
+                      {selectedEvent.tenKhachHang || selectedEvent.hoTenKH || 'Khách hàng'}
+                    </div>
+                    <div className="text-sm text-gray-500">Mã KH: {selectedEvent.maKH}</div>
+                  </div>
                 </div>
-                <div className="flex gap-2 flex-wrap">
-                  {parseThuString(selectedEvent.thu || selectedEvent.ngayTap).map(d => {
-                    const dayInfo = DAYS_OF_WEEK.find(day => day.value === d);
+
+                {/* Ngày tập trong tuần */}
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold text-gray-600 flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4" />
+                    Ngày tập trong tuần
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {parseThuString(selectedEvent.thu || selectedEvent.ngayTap).map(d => {
+                      const dayInfo = DAYS_OF_WEEK.find(day => day.value === d);
+                      return (
+                        <span
+                          key={d}
+                          className="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-sm font-bold"
+                        >
+                          {dayInfo?.fullLabel || d}
+                        </span>
+                      );
+                    })}
+                    {parseThuString(selectedEvent.thu || selectedEvent.ngayTap).length === 0 && (
+                      <span className="text-gray-400 text-sm">Chưa xác định</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Ca tập */}
+                <div className="p-3 bg-blue-50 rounded-xl">
+                  <div className="text-sm font-semibold text-gray-600 flex items-center gap-2 mb-2">
+                    <Clock className="w-4 h-4" />
+                    Ca tập
+                  </div>
+                  <div className="font-bold text-blue-700">
+                    {selectedEvent.tenCaTap || selectedEvent.moTaCa || (() => {
+                      const caInfo = getCaTapInfo(selectedEvent.ca || selectedEvent.caTap || selectedEvent.maCa);
+                      return caInfo ? `${caInfo.tenCa} - ${caInfo.moTa}` : (selectedEvent.caTap || 'Chưa xác định');
+                    })()}
+                  </div>
+                </div>
+
+                {/* Khu vực */}
+                <div className="p-3 bg-green-50 rounded-xl">
+                  <div className="text-sm font-semibold text-gray-600 flex items-center gap-2 mb-2">
+                    <MapPin className="w-4 h-4" />
+                    Khu vực
+                  </div>
+                  <div className="font-bold text-green-700">
+                    {selectedEvent.tenKhuVuc || (() => {
+                      const kvInfo = getKhuVucInfo(selectedEvent.maKV);
+                      return kvInfo ? kvInfo.tenKhuVuc : 'Chưa xác định';
+                    })()}
+                  </div>
+                </div>
+
+                {/* Trạng thái */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div className="text-sm font-semibold text-gray-600">Trạng thái</div>
+                  {(() => {
+                    const trangThai = getTrangThaiBadge(selectedEvent.trangThai);
                     return (
-                      <span 
-                        key={d} 
-                        className="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-sm font-bold"
-                      >
-                        {dayInfo?.fullLabel || d}
+                      <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${trangThai.bg} ${trangThai.text}`}>
+                        {trangThai.label}
                       </span>
                     );
-                  })}
-                  {parseThuString(selectedEvent.thu || selectedEvent.ngayTap).length === 0 && (
-                    <span className="text-gray-400 text-sm">Chưa xác định</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Ca tập */}
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <div className="text-sm font-semibold text-gray-600 flex items-center gap-2 mb-2">
-                  <Clock className="w-4 h-4" />
-                  Ca tập
-                </div>
-                <div className="font-bold text-blue-700">
-                  {selectedEvent.tenCaTap || selectedEvent.moTaCa || (() => {
-                    const caInfo = getCaTapInfo(selectedEvent.ca || selectedEvent.caTap || selectedEvent.maCa);
-                    return caInfo ? `${caInfo.tenCa} - ${caInfo.moTa}` : (selectedEvent.caTap || 'Chưa xác định');
                   })()}
                 </div>
-              </div>
 
-              {/* Khu vực */}
-              <div className="p-3 bg-green-50 rounded-xl">
-                <div className="text-sm font-semibold text-gray-600 flex items-center gap-2 mb-2">
-                  <MapPin className="w-4 h-4" />
-                  Khu vực
-                </div>
-                <div className="font-bold text-green-700">
-                  {selectedEvent.tenKhuVuc || (() => {
-                    const kvInfo = getKhuVucInfo(selectedEvent.maKV);
-                    return kvInfo ? kvInfo.tenKhuVuc : 'Chưa xác định';
-                  })()}
+                {/* Mã lịch tập */}
+                <div className="text-center text-xs text-gray-400">
+                  Mã lịch tập: <strong>{selectedEvent.maLT}</strong>
                 </div>
               </div>
 
-              {/* Trạng thái */}
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <div className="text-sm font-semibold text-gray-600">Trạng thái</div>
-                {(() => {
-                  const trangThai = getTrangThaiBadge(selectedEvent.trangThai);
-                  return (
-                    <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${trangThai.bg} ${trangThai.text}`}>
-                      {trangThai.label}
-                    </span>
-                  );
-                })()}
-              </div>
+              {/* Footer với các nút hành động */}
+              <div className="p-4 border-t bg-gray-50 space-y-3">
+                {/* Nút Hủy lịch - chỉ hiển thị nếu lịch chưa bị hủy */}
+                {selectedEvent.trangThai !== 'Huy' && selectedEvent.trangThai !== 'DaHuy' && (
+                  <button
+                    onClick={handleHuyLichTap}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-all disabled:opacity-50"
+                  >
+                    {actionLoading ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <X className="w-4 h-4" />
+                    )}
+                    Hủy lịch tập
+                  </button>
+                )}
 
-              {/* Mã lịch tập */}
-              <div className="text-center text-xs text-gray-400">
-                Mã lịch tập: <strong>{selectedEvent.maLT}</strong>
-              </div>
-            </div>
+                {/* Hiển thị thông báo nếu lịch đã hủy */}
+                {(selectedEvent.trangThai === 'Huy' || selectedEvent.trangThai === 'DaHuy') && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-center">
+                    <div className="text-red-700 font-medium">❌ Lịch đã bị hủy</div>
+                  </div>
+                )}
 
-            {/* Footer với các nút hành động */}
-            <div className="p-4 border-t bg-gray-50 space-y-3">
-              {/* Nút Hủy lịch - chỉ hiển thị nếu lịch chưa bị hủy */}
-              {selectedEvent.trangThai !== 'Huy' && selectedEvent.trangThai !== 'DaHuy' && (
                 <button
-                  onClick={handleHuyLichTap}
-                  disabled={actionLoading}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-all disabled:opacity-50"
+                  onClick={() => setShowEventModal(false)}
+                  className="w-full px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
                 >
-                  {actionLoading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <X className="w-4 h-4" />
-                  )}
-                  Hủy lịch tập
+                  Đóng
                 </button>
-              )}
-              
-              {/* Hiển thị thông báo nếu lịch đã hủy */}
-              {(selectedEvent.trangThai === 'Huy' || selectedEvent.trangThai === 'DaHuy') && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-center">
-                  <div className="text-red-700 font-medium">❌ Lịch đã bị hủy</div>
-                </div>
-              )}
-              
-              <button
-                onClick={() => setShowEventModal(false)}
-                className="w-full px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
-              >
-                Đóng
-              </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
 

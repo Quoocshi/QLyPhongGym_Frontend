@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { dichVuGymService, userService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Dumbbell, Users, Clock, CreditCard, User, DollarSign, CheckCircle, 
+import {
+  Dumbbell, Users, Clock, CreditCard, User, DollarSign, CheckCircle,
   Info, Star, ArrowRight, Sparkles, Award, Target, ChevronRight,
   UserCheck, Calendar, MapPin
 } from 'lucide-react';
@@ -109,6 +109,52 @@ const RegisterService = () => {
       return;
     }
 
+    // Check if any selected services require PT or Class selection
+    const servicesNeedingPT = [];
+    const servicesNeedingClass = [];
+
+    for (const maDV of selectedDV) {
+      const dv = dichVuList.find(x => x.maDV === maDV);
+      if (!dv) continue;
+
+      if (dv.loaiDV === 'PT' && !selectedTrainerByDV[maDV]) {
+        servicesNeedingPT.push(dv);
+      } else if (dv.loaiDV === 'Lop' && !selectedClassByDV[maDV]) {
+        servicesNeedingClass.push(dv);
+      }
+    }
+
+    // If there are services needing PT/Class selection, load options and show error
+    if (servicesNeedingPT.length > 0 || servicesNeedingClass.length > 0) {
+      // Automatically load PT/Class options if not already loaded
+      for (const dv of servicesNeedingPT) {
+        if (!trainerOptions[dv.maDV]) {
+          await choosePTForDV(dv.maDV);
+        }
+      }
+      for (const dv of servicesNeedingClass) {
+        if (!classOptions[dv.maDV]) {
+          await chooseClassForDV(dv.maDV);
+        }
+      }
+
+      // Show error message
+      const ptNames = servicesNeedingPT.map(dv => dv.tenDV).join(', ');
+      const classNames = servicesNeedingClass.map(dv => dv.tenDV).join(', ');
+      let errorMsg = 'Vui lòng chọn ';
+
+      if (servicesNeedingPT.length > 0) {
+        errorMsg += `PT cho gói: ${ptNames}`;
+      }
+      if (servicesNeedingClass.length > 0) {
+        if (servicesNeedingPT.length > 0) errorMsg += ' và ';
+        errorMsg += `lớp cho gói: ${classNames}`;
+      }
+
+      setError(errorMsg);
+      return;
+    }
+
     const payload = {
       accountId: accountId ? Number(accountId) : Number(khachHang?.accountId),
       maKH: khachHang?.maKH,
@@ -146,9 +192,59 @@ const RegisterService = () => {
     return badges[loaiDV] || badges['TuDo'];
   };
 
+  // Determine if a package is popular (hardcoded to "Gym PT 30 ngày")
+  const isPopularPackage = (dv) => {
+    return dv.tenDV === 'Gym PT 30 ngày';
+  };
+
+  // Get image based on sport, service type, and service code
+  const getServiceImage = (boMonName, loaiDV, maDV = '') => {
+    if (!boMonName) return null;
+
+    // Map Vietnamese names to folder names
+    const sportMap = {
+      'Gym': 'Gym',
+      'Gym Fitness': 'Gym',
+      'Yoga': 'Yoga',
+      'Zumba': 'Zumba',
+      'Bơi': 'Boi',
+      'Bơi lội': 'Boi',
+      'Cardio': 'Cardio',
+      'CrossFit': 'Crossfit',
+      'Crossfit': 'Crossfit'
+    };
+
+    const sport = sportMap[boMonName] || boMonName;
+
+    // Sports that have PT (Gym, Cardio, Crossfit)
+    const ptSports = ['Gym', 'Cardio', 'Crossfit'];
+    // Sports that have Lop (Yoga, Zumba, Boi)
+    const lopSports = ['Yoga', 'Zumba', 'Boi'];
+
+    // Map service type to image type
+    let imageType = 'Tudo'; // default
+    if (loaiDV === 'PT') {
+      imageType = 'PT';
+    } else if (loaiDV === 'Lop') {
+      imageType = 'Lop';
+    }
+
+    // Use hash of maDV (service code) to get consistent image number (1-4)
+    // Each service will have its own unique but consistent image
+    const hashString = maDV || `${sport}_${imageType}`;
+    let hash = 0;
+    for (let i = 0; i < hashString.length; i++) {
+      hash = ((hash << 5) - hash) + hashString.charCodeAt(i);
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    const imageNumber = (Math.abs(hash) % 4) + 1;
+
+    return `/images/${sport}/${imageNumber}_${sport}_${imageType}.jpg`;
+  };
+
   if (loading && boMonList.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-orange-50">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)' }}>
         <div className="text-center">
           <Dumbbell className="w-12 h-12 text-primary animate-bounce mx-auto mb-4" />
           <p className="text-gray-600">Đang tải dịch vụ...</p>
@@ -158,7 +254,7 @@ const RegisterService = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)' }}>
       {/* Header */}
       <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-8 px-6">
         <div className="max-w-7xl mx-auto">
@@ -182,14 +278,12 @@ const RegisterService = () => {
               { num: 4, label: 'Thanh toán' }
             ].map((s, idx) => (
               <div key={s.num} className="flex items-center">
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
-                  step >= s.num 
-                    ? 'bg-white text-orange-600 font-bold shadow-lg' 
-                    : 'bg-white/20 text-white/70'
-                }`}>
-                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
-                    step >= s.num ? 'bg-orange-600 text-white' : 'bg-white/30'
-                  }`}>{s.num}</span>
+                <div className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${step >= s.num
+                  ? 'bg-white text-orange-600 font-bold shadow-lg'
+                  : 'bg-white/20 text-white/70'
+                  }`}>
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${step >= s.num ? 'bg-orange-600 text-white' : 'bg-white/30'
+                    }`}>{s.num}</span>
                   <span className="hidden sm:inline">{s.label}</span>
                 </div>
                 {idx < 3 && <ChevronRight className="w-5 h-5 mx-2 text-white/50" />}
@@ -208,178 +302,264 @@ const RegisterService = () => {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex gap-8">
-          {/* Main Content */}
-          <div className="flex-1">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {/* Bộ môn Column */}
-              <div className="lg:col-span-1">
-                <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
-                  <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
-                    <Target className="w-5 h-5 text-primary" />
-                    Bộ môn
-                  </h2>
-                  <div className="space-y-2">
-                    {boMonList.map(b => (
-                      <button 
-                        key={b.maBM} 
-                        onClick={() => loadDichVu(b.maBM)} 
-                        className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-300 ${
-                          selectedBoMon?.maBM === b.maBM 
-                            ? 'border-primary bg-orange-50 shadow-md transform scale-[1.02]' 
-                            : 'border-gray-100 hover:border-primary/50 hover:shadow-sm'
-                        }`}
-                      >
-                        <div className="font-semibold text-gray-800">{b.tenBM}</div>
-                        {b.moTa && <div className="text-xs text-gray-500 mt-1">{b.moTa}</div>}
-                      </button>
-                    ))}
+      <div className="max-w-[1800px] mx-auto px-6 py-8">
+        <div className="flex gap-6">
+          {/* Left Promo Banner */}
+          <aside className="w-64 flex-shrink-0 hidden 2xl:block">
+            <div className="sticky top-6 space-y-6">
+              {/* Gym PT 30 Days Promo Banner */}
+              <div className="bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-2xl p-6 text-white shadow-2xl overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+                <div className="relative z-10">
+                  <Star className="w-10 h-10 mb-3 fill-current" />
+                  <h3 className="text-2xl font-extrabold mb-2">Phổ biến nhất!</h3>
+                  <p className="text-lg text-white font-bold mb-1">Gym PT 30 ngày</p>
+                  <p className="text-sm text-white/90 mb-4">Gói tập luyện cá nhân được yêu thích nhất</p>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 border border-white/30">
+                    <p className="text-xs font-semibold">✨ Ưu điểm nổi bật:</p>
+                    <ul className="text-xs mt-2 space-y-1">
+                      <li>• Huấn luyện 1-1 cá nhân</li>
+                      <li>• Lịch tập linh hoạt</li>
+                      <li>• Hiệu quả tối ưu</li>
+                    </ul>
                   </div>
                 </div>
               </div>
 
-              {/* Dịch vụ Column */}
-              <div className="lg:col-span-3">
-                <div className="bg-white rounded-2xl shadow-lg p-6">
-                  <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
-                    <Award className="w-5 h-5 text-primary" />
-                    Dịch vụ {selectedBoMon ? `- ${selectedBoMon.tenBM}` : ''}
-                    {selectedBoMon && (
-                      <span className="ml-auto text-sm font-normal text-gray-500">
-                        {dichVuList.length} gói có sẵn
-                      </span>
-                    )}
-                  </h2>
-                  
-                  {dichVuList.length === 0 ? (
-                    <div className="text-center py-16">
-                      <Dumbbell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">Chọn bộ môn để xem các gói dịch vụ</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {dichVuList.map(dv => {
-                        const badge = getLoaiDVBadge(dv.loaiDV);
-                        const BadgeIcon = badge.icon;
-                        const isSelected = selectedDV.includes(dv.maDV);
-                        
-                        return (
-                          <div 
-                            key={dv.maDV} 
-                            className={`relative p-6 rounded-2xl border-2 transition-all duration-300 ${
-                              isSelected 
-                                ? 'border-primary bg-orange-50 shadow-lg transform scale-[1.01]' 
-                                : 'border-gray-100 hover:border-primary/50 hover:shadow-md bg-white'
-                            }`}
-                          >
-                            {isSelected && (
-                              <div className="absolute top-4 right-4">
-                                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                                  <CheckCircle className="w-5 h-5 text-white" />
-                                </div>
-                              </div>
-                            )}
+              {/* Trust Badge */}
+              <div className="bg-white rounded-2xl p-6 shadow-lg">
+                <div className="text-center">
+                  <Award className="w-12 h-12 text-orange-500 mx-auto mb-3" />
+                  <h4 className="font-bold text-gray-800 mb-2">Đã có</h4>
+                  <div className="text-4xl font-extrabold text-primary mb-1">10,000+</div>
+                  <p className="text-sm text-gray-600">Thành viên tin tưởng</p>
+                </div>
+              </div>
+            </div>
+          </aside>
 
-                            <div className="flex flex-col lg:flex-row gap-6">
-                              {/* Service Icon & Info */}
-                              <div className="flex-1">
-                                <div className="flex items-start gap-4">
-                                  <div className={`w-14 h-14 ${badge.bg} rounded-xl flex items-center justify-center shadow-lg`}>
-                                    <BadgeIcon className="w-7 h-7 text-white" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-3 flex-wrap">
-                                      <h3 className="text-xl font-bold text-gray-800">{dv.tenDV}</h3>
-                                      <span className={`px-3 py-1 ${badge.bg} text-white text-xs font-bold rounded-full`}>
-                                        {badge.text}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                                      <span className="flex items-center gap-1">
-                                        <Clock className="w-4 h-4" />
-                                        {dv.thoiHan || '-'} ngày
-                                      </span>
-                                      {dv.loaiDV === 'PT' && (
-                                        <span className="flex items-center gap-1 text-orange-600">
-                                          <Star className="w-4 h-4 fill-current" />
-                                          1-1 với PT
-                                        </span>
-                                      )}
-                                    </div>
-                                    {dv.moTa && (
-                                      <p className="mt-3 text-gray-600 text-sm">{dv.moTa}</p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            {/* Bộ môn Selection */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+              <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <Target className="w-5 h-5 text-primary" />
+                Chọn bộ môn
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-3">
+                {boMonList.map(b => {
+                  const previewImage = getServiceImage(b.tenBM, 'Tudo', b.maBM);
+                  return (
+                    <button
+                      key={b.maBM}
+                      onClick={() => loadDichVu(b.maBM)}
+                      className={`text-left rounded-xl border-2 transition-all duration-300 overflow-hidden ${selectedBoMon?.maBM === b.maBM
+                        ? 'border-primary bg-orange-50 shadow-lg ring-2 ring-primary/20'
+                        : 'border-gray-100 hover:border-primary/50 hover:shadow-md'
+                        }`}
+                    >
+                      {previewImage && (
+                        <div className="relative h-20 overflow-hidden">
+                          <img
+                            src={previewImage}
+                            alt={b.tenBM}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        </div>
+                      )}
+                      <div className="p-3">
+                        <div className="font-bold text-sm text-gray-800 text-center">{b.tenBM}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-                              {/* Price & Actions */}
-                              <div className="flex flex-col items-end justify-between min-w-[200px]">
-                                <div className="text-right">
-                                  <div className="text-sm text-gray-500">Giá gói</div>
-                                  <div className="text-2xl font-extrabold text-primary">
-                                    {formatPrice(dv.donGia || 0)}
-                                  </div>
-                                </div>
+            {/* Dịch vụ Grid */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="font-bold text-lg mb-6 flex items-center gap-2">
+                <Award className="w-5 h-5 text-primary" />
+                Chọn gói tập {selectedBoMon ? `- ${selectedBoMon.tenBM}` : ''}
+                {selectedBoMon && (
+                  <span className="ml-auto text-sm font-normal text-gray-500">
+                    {dichVuList.length} gói có sẵn
+                  </span>
+                )}
+              </h2>
 
-                                <div className="flex flex-col gap-2 mt-4 w-full">
-                                  <button
-                                    onClick={() => toggleSelectDV(dv.maDV)}
-                                    className={`w-full py-3 px-4 rounded-xl font-bold transition-all duration-300 ${
-                                      isSelected
-                                        ? 'bg-primary text-white shadow-lg'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-primary hover:text-white'
-                                    }`}
-                                  >
-                                    {isSelected ? '✓ Đã chọn' : 'Chọn gói này'}
-                                  </button>
+              {dichVuList.length === 0 ? (
+                <div className="text-center py-16">
+                  <Dumbbell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">Chọn bộ môn để xem các gói dịch vụ</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {dichVuList.map(dv => {
+                    const badge = getLoaiDVBadge(dv.loaiDV);
+                    const BadgeIcon = badge.icon;
+                    const isSelected = selectedDV.includes(dv.maDV);
+                    const serviceImage = getServiceImage(selectedBoMon?.tenBM, dv.loaiDV, dv.maDV);
+                    const isPopular = isPopularPackage(dv);
 
-                                  {dv.loaiDV === 'Lop' && isSelected && (
-                                    <button 
-                                      onClick={() => chooseClassForDV(dv.maDV)} 
-                                      className="w-full py-2 px-4 rounded-xl border-2 border-blue-500 text-blue-600 font-medium hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
-                                    >
-                                      <Users className="w-4 h-4" />
-                                      Chọn lớp học
-                                    </button>
-                                  )}
-                                  {dv.loaiDV === 'PT' && isSelected && (
-                                    <button 
-                                      onClick={() => choosePTForDV(dv.maDV)} 
-                                      className="w-full py-2 px-4 rounded-xl border-2 border-orange-500 text-orange-600 font-medium hover:bg-orange-50 transition-all flex items-center justify-center gap-2"
-                                    >
-                                      <UserCheck className="w-4 h-4" />
-                                      Chọn huấn luyện viên
-                                    </button>
-                                  )}
-                                </div>
+                    return (
+                      <div
+                        key={dv.maDV}
+                        className={`relative rounded-2xl border-2 transition-all duration-300 overflow-hidden group ${isPopular
+                          ? 'border-gradient scale-105 shadow-2xl'
+                          : isSelected
+                            ? 'border-primary bg-orange-50 shadow-lg'
+                            : 'border-gray-200 hover:border-primary/50 hover:shadow-md bg-white'
+                          }`}
+                        style={isPopular ? {
+                          borderImage: 'linear-gradient(135deg, #f97316, #dc2626) 1',
+                          boxShadow: '0 20px 40px rgba(249, 115, 22, 0.3)'
+                        } : {}}
+                      >
+                        {/* Popular Badge */}
+                        {isPopular && (
+                          <>
+                            <div className="absolute -top-3 -right-3 z-20">
+                              <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 animate-pulse border-2 border-white">
+                                <Star className="w-4 h-4 fill-current" />
+                                <span className="text-xs font-extrabold">PHỔ BIẾN NHẤT</span>
                               </div>
                             </div>
+                            {/* Glow effect */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-orange-400/10 to-red-400/10 rounded-2xl pointer-events-none"></div>
+                          </>
+                        )}
 
+                        {/* Selected Checkmark */}
+                        {isSelected && !isPopular && (
+                          <div className="absolute top-3 right-3 z-10">
+                            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-lg">
+                              <CheckCircle className="w-5 h-5 text-white" />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Service Image */}
+                        {serviceImage && (
+                          <div className="relative h-40 overflow-hidden">
+                            <img
+                              src={serviceImage}
+                              alt={dv.tenDV}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+
+                            {/* Badge on Image */}
+                            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+                              <span className={`px-3 py-1 ${badge.bg} text-white text-xs font-bold rounded-lg shadow-md flex items-center gap-1.5 border border-white/20`}>
+                                <BadgeIcon className="w-3 h-3" />
+                                {badge.text}
+                              </span>
+                              {dv.thoiHan && (
+                                <span className="px-2 py-1 bg-white/20 text-white text-xs font-semibold rounded-md backdrop-blur-sm border border-white/30 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {dv.thoiHan} ngày
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="p-4">
+                          {/* Service Info */}
+                          <div className="mb-4">
+                            <h3 className="text-base font-bold text-gray-800 mb-2 line-clamp-2">{dv.tenDV}</h3>
+                            <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+                              <Clock className="w-3 h-3" />
+                              <span>{dv.thoiHan || '-'} ngày</span>
+                              {dv.loaiDV === 'PT' && (
+                                <>
+                                  <span className="text-gray-300">•</span>
+                                  <Star className="w-3 h-3 fill-current text-orange-500" />
+                                  <span className="text-orange-600 font-medium">1-1 PT</span>
+                                </>
+                              )}
+                            </div>
+                            {dv.moTa && (
+                              <p className="text-xs text-gray-500 line-clamp-2">{dv.moTa}</p>
+                            )}
+                          </div>
+
+                          {/* Price */}
+                          <div className="mb-3 pb-3 border-b border-gray-100">
+                            <div className="text-xs text-gray-500 mb-1">Giá gói</div>
+                            <div className="text-xl font-extrabold text-primary">
+                              {formatPrice(dv.donGia || 0)}
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="space-y-2">
+                            <button
+                              onClick={() => toggleSelectDV(dv.maDV)}
+                              className={`w-full py-2.5 px-4 rounded-xl font-bold text-sm transition-all duration-300 ${isSelected
+                                ? 'bg-primary text-white shadow-md'
+                                : isPopular
+                                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:shadow-lg'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-primary hover:text-white'
+                                }`}
+                            >
+                              {isSelected ? '✓ Đã chọn' : 'Chọn gói này'}
+                            </button>
+
+                            {dv.loaiDV === 'Lop' && isSelected && (
+                              <button
+                                onClick={() => chooseClassForDV(dv.maDV)}
+                                className="w-full py-2 px-3 rounded-lg border border-blue-500 text-blue-600 text-xs font-medium hover:bg-blue-50 transition-all flex items-center justify-center gap-1.5"
+                              >
+                                <Users className="w-3 h-3" />
+                                Chọn lớp
+                              </button>
+                            )}
+                            {dv.loaiDV === 'PT' && isSelected && (
+                              <button
+                                onClick={() => choosePTForDV(dv.maDV)}
+                                className="w-full py-2 px-3 rounded-lg border border-orange-500 text-orange-600 text-xs font-medium hover:bg-orange-50 transition-all flex items-center justify-center gap-1.5"
+                              >
+                                <UserCheck className="w-3 h-3" />
+                                Chọn PT
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Expanded Options */}
+                        {(classOptions[dv.maDV]?.length > 0 || trainerOptions[dv.maDV]?.length > 0) && (
+                          <div className="px-4 pb-4">
                             {/* Class Options */}
-                            {classOptions[dv.maDV] && classOptions[dv.maDV].length > 0 && (
-                              <div className="mt-6 pt-6 border-t border-gray-200">
-                                <div className="text-sm font-bold mb-3 flex items-center gap-2">
-                                  <Users className="w-4 h-4 text-blue-600" />
-                                  Chọn lớp học:
+                            {classOptions[dv.maDV]?.length > 0 && (
+                              <div className="mb-3">
+                                <div className="text-xs font-bold mb-2 flex items-center gap-1.5 text-blue-600">
+                                  <Users className="w-3 h-3" />
+                                  Chọn lớp:
                                 </div>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                  {classOptions[dv.maDV].map(lp => (
-                                    <button 
-                                      key={lp.maLop} 
+                                <div className="space-y-1.5">
+                                  {classOptions[dv.maDV].slice(0, 2).map(lp => (
+                                    <button
+                                      key={lp.maLop}
                                       onClick={() => setSelectedClassByDV(s => ({ ...s, [dv.maDV]: lp.maLop }))}
-                                      className={`p-4 rounded-xl border-2 text-left transition-all ${
-                                        selectedClassByDV[dv.maDV] === lp.maLop 
-                                          ? 'border-blue-500 bg-blue-50 shadow-md' 
-                                          : 'border-gray-200 hover:border-blue-300'
-                                      }`}
+                                      className={`w-full p-2 rounded-lg border text-left transition-all text-xs ${selectedClassByDV[dv.maDV] === lp.maLop
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-200 hover:border-blue-300'
+                                        }`}
                                     >
                                       <div className="font-semibold text-gray-800">{lp.tenLop}</div>
-                                      <div className="text-xs text-gray-500 mt-1">Mã: {lp.maLop}</div>
                                       {lp.slToiDa && (
-                                        <div className="text-xs text-blue-600 mt-1">
-                                          Sĩ số: {lp.slHienTai || 0}/{lp.slToiDa}
+                                        <div className="text-blue-600 mt-0.5">
+                                          {lp.slHienTai || 0}/{lp.slToiDa} người
                                         </div>
                                       )}
                                     </button>
@@ -389,78 +569,58 @@ const RegisterService = () => {
                             )}
 
                             {/* Trainer Options */}
-                            {trainerOptions[dv.maDV] && trainerOptions[dv.maDV].length > 0 && (
-                              <div className="mt-6 pt-6 border-t border-gray-200">
-                                <div className="text-sm font-bold mb-3 flex items-center gap-2">
-                                  <UserCheck className="w-4 h-4 text-orange-600" />
-                                  Chọn Huấn luyện viên (PT):
+                            {trainerOptions[dv.maDV]?.length > 0 && (
+                              <div>
+                                <div className="text-xs font-bold mb-2 flex items-center gap-1.5 text-orange-600">
+                                  <UserCheck className="w-3 h-3" />
+                                  Chọn PT:
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                  {trainerOptions[dv.maDV].map(tv => {
+                                <div className="space-y-1.5">
+                                  {trainerOptions[dv.maDV].slice(0, 2).map(tv => {
                                     const trainerId = tv.maNV || tv.id || tv.nvId;
                                     const trainerName = tv.tenNV || tv.tenNhanVien || tv.hoTen || tv.name || trainerId;
                                     const isSelectedTrainer = selectedTrainerByDV[dv.maDV] === trainerId;
-                                    
+
                                     return (
-                                      <button 
-                                        key={trainerId || Math.random()} 
+                                      <button
+                                        key={trainerId || Math.random()}
                                         onClick={() => setSelectedTrainerByDV(s => ({ ...s, [dv.maDV]: trainerId }))}
-                                        className={`p-4 rounded-xl border-2 text-left transition-all ${
-                                          isSelectedTrainer 
-                                            ? 'border-orange-500 bg-orange-50 shadow-lg' 
-                                            : 'border-gray-200 hover:border-orange-300 hover:shadow-md'
-                                        }`}
+                                        className={`w-full p-2 rounded-lg border text-left transition-all ${isSelectedTrainer
+                                          ? 'border-orange-500 bg-orange-50'
+                                          : 'border-gray-200 hover:border-orange-300'
+                                          }`}
                                       >
-                                        <div className="flex items-center gap-3">
-                                          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                                            isSelectedTrainer 
-                                              ? 'bg-gradient-to-br from-orange-500 to-orange-600' 
-                                              : 'bg-gray-200'
-                                          }`}>
-                                            <User className={`w-6 h-6 ${isSelectedTrainer ? 'text-white' : 'text-gray-500'}`} />
+                                        <div className="flex items-center gap-2">
+                                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isSelectedTrainer
+                                            ? 'bg-gradient-to-br from-orange-500 to-orange-600'
+                                            : 'bg-gray-200'
+                                            }`}>
+                                            <User className={`w-4 h-4 ${isSelectedTrainer ? 'text-white' : 'text-gray-500'}`} />
                                           </div>
-                                          <div>
-                                            <div className="font-bold text-gray-800">{trainerName}</div>
-                                            <div className="text-xs text-gray-500">Mã PT: {trainerId}</div>
+                                          <div className="flex-1 min-w-0">
+                                            <div className="font-semibold text-xs text-gray-800 truncate">{trainerName}</div>
                                             {tv.chuyenMon && (
-                                              <div className="text-xs text-orange-600 mt-1 flex items-center gap-1">
-                                                <Star className="w-3 h-3" />
-                                                {tv.chuyenMon}
-                                              </div>
+                                              <div className="text-xs text-orange-600 truncate">{tv.chuyenMon}</div>
                                             )}
                                           </div>
                                         </div>
-                                        {isSelectedTrainer && (
-                                          <div className="mt-3 flex items-center gap-1 text-orange-600 text-sm font-medium">
-                                            <CheckCircle className="w-4 h-4" />
-                                            Đã chọn PT này
-                                          </div>
-                                        )}
                                       </button>
                                     );
                                   })}
                                 </div>
-                                <div className="mt-4 p-4 bg-orange-50 rounded-xl border border-orange-200">
-                                  <div className="flex items-start gap-3">
-                                    <Info className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                                    <div className="text-sm text-orange-800">
-                                      <strong>Lưu ý:</strong> Sau khi đăng ký thành công, Huấn luyện viên sẽ liên hệ để sắp xếp lịch tập phù hợp với bạn.
-                                    </div>
-                                  </div>
-                                </div>
                               </div>
                             )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
-          {/* Sidebar - Order Summary */}
+          {/* Right Sidebar - Order Summary */}
           <aside className="w-80 flex-shrink-0 hidden xl:block">
             <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
               {/* Customer Info */}
@@ -508,7 +668,7 @@ const RegisterService = () => {
                     const trainer = trainerOptions[maDV]?.find(t => (t.maNV || t.id) === trainerId);
                     return (
                       <div key={maDV} className="text-sm text-gray-600">
-                        {trainer?.tenNV || trainer?.hoTen || trainerId} 
+                        {trainer?.tenNV || trainer?.hoTen || trainerId}
                         <span className="text-gray-400"> ({dv?.tenDV})</span>
                       </div>
                     );
@@ -529,9 +689,9 @@ const RegisterService = () => {
               </div>
 
               {/* Submit Button */}
-              <button 
-                disabled={submitting || selectedDV.length === 0} 
-                onClick={handleRegister} 
+              <button
+                disabled={submitting || selectedDV.length === 0}
+                onClick={handleRegister}
                 className="w-full py-4 px-6 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
               >
                 {submitting ? (
@@ -563,8 +723,8 @@ const RegisterService = () => {
             <div className="text-sm text-gray-500">{selectedDV.length} gói đã chọn</div>
             <div className="text-xl font-extrabold text-primary">{formatPrice(totalPrice)}</div>
           </div>
-          <button 
-            disabled={submitting || selectedDV.length === 0} 
+          <button
+            disabled={submitting || selectedDV.length === 0}
             onClick={handleRegister}
             className="py-3 px-8 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-bold shadow-lg disabled:opacity-50 flex items-center gap-2"
           >

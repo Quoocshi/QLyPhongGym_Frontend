@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #F97316; /* Orange-500 */
+  --color-primary: #FF8633; /* Orange */
   --color-primary-hover: #EA580C; /* Orange-600 */
-  --color-secondary: #1F2937; /* Gray-800 */
+  --color-secondary: #F4EDDF; /* Antique White */
 }
 
 body {
-  background-color: var(--color-gray-50);
+  /* background-color removed - each page manages its own background */
   color: var(--color-gray-900);
 }
 
@@ -194,6 +194,6 @@ body {
 
 /* Background Pattern */
 .bg-grid-pattern {
-  background-image: radial-gradient(circle, #e5e7eb 1px, transparent 1px);
+  background-image: radial-gradient(circle, #F4EDDF 1px, transparent 1px);
   background-size: 30px 30px;
   }

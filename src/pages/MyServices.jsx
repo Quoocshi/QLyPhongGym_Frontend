@@ -43,8 +43,8 @@ const MyServices = () => {
     return () => { mounted = false; };
   }, []);
 
-  if (loading) return <div className="p-6">Đang tải...</div>;
-  if (error) return <div className="p-6 text-red-600">Lỗi: {error}</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)' }}>Đang tải...</div>;
+  if (error) return <div className="min-h-screen flex items-center justify-center text-red-600" style={{ background: 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)' }}>Lỗi: {error}</div>;
 
   const kh = data?.khachHang;
   const ds = data?.dichVuDaDangKy || [];
@@ -52,7 +52,7 @@ const MyServices = () => {
   const total = ds.reduce((s, it) => s + (Number(it.giaTien || it.gia || 0) || 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen p-6 space-y-6" style={{ background: 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)' }}>
       <BackToUserHome className="mb-2" />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Dịch vụ của tôi</h1>
