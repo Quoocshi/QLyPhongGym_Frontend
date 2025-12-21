@@ -31,7 +31,7 @@ useEffect(() => {
 
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)' }}>
       <div className="flex items-center gap-3">
         <CheckCircle2 className="animate-spin w-6 h-6 text-green-600"/>
         <span>Đang tải thông tin hóa đơn…</span>
@@ -40,7 +40,7 @@ useEffect(() => {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)' }}>
       <div className="w-full max-w-lg bg-white rounded shadow p-6 text-center">
         <div className="flex items-center justify-center mb-4">
           <div className="p-3 rounded-full bg-green-50 text-green-600">

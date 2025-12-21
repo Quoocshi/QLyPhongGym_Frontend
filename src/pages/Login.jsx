@@ -16,13 +16,15 @@ const Login = () => {
     setError('');
     try {
       const response = await authService.login(data);
-      const token = response.token || response.access_token; 
+      const token = response.token || response.access_token;
       if (token) {
         localStorage.setItem('auth_token', token);
         // Decode token to get role and redirect accordingly
         const role = getRoleFromToken(token);
         if (role === 'trainer') {
           navigate('/trainer/home');
+        } else if (role === 'staff') {
+          navigate('/staff/home');
         } else if (role === 'user') {
           navigate('/user/home');
         } else {
@@ -30,7 +32,7 @@ const Login = () => {
           navigate('/user/home');
         }
       } else {
-         setError('Đăng nhập thất bại. Không nhận được token.');
+        setError('Đăng nhập thất bại. Không nhận được token.');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
@@ -45,7 +47,7 @@ const Login = () => {
       setError('');
       console.log('Google login with credential');
       const credential = credentialResponse.credential;
-      
+
       if (!credential) {
         setError('Không nhận được credential từ Google');
         setIsLoading(false);
@@ -54,8 +56,8 @@ const Login = () => {
 
       const authResponse = await authService.googleLogin(credential);
       console.log('Google login response:', authResponse);
-      const token = authResponse.access_token; 
-      
+      const token = authResponse.access_token;
+
       if (token) {
         localStorage.setItem('auth_token', token);
         // Decode token to get role and redirect accordingly
@@ -63,6 +65,8 @@ const Login = () => {
         console.log('Role from token:', role);
         if (role === 'trainer') {
           navigate('/trainer/home');
+        } else if (role === 'staff') {
+          navigate('/staff/home');
         } else if (role === 'user') {
           navigate('/user/home');
         } else {
@@ -86,29 +90,29 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-orange-50 via-white to-orange-50 relative overflow-hidden">
+    <div className="min-h-screen flex relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)' }}>
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-orange-200/30 rounded-full blur-3xl animate-float"></div>
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-300/20 rounded-full blur-3xl animate-float-delayed"></div>
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-orange-100/40 rounded-full blur-3xl animate-pulse"></div>
       </div>
-      
+
       {/* Left Side - Form */}
       <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 w-full lg:w-1/2 relative z-10">
         {/* Back Button */}
         <Link to="/" className="absolute top-8 left-8 flex items-center text-gray-600 hover:text-primary transition-all duration-300 font-medium group">
-            <ArrowLeft className="h-5 w-5 mr-2 transform group-hover:-translate-x-2 transition-transform duration-300" />
-            <span className="group-hover:text-primary">Về Trang chủ</span>
+          <ArrowLeft className="h-5 w-5 mr-2 transform group-hover:-translate-x-2 transition-transform duration-300" />
+          <span className="group-hover:text-primary">Về Trang chủ</span>
         </Link>
 
         <div className="mx-auto w-full max-w-md opacity-0 animate-fade-in-up">
           <div className="text-center mb-10">
             <Link to="/" className="inline-flex justify-center mb-6 transform hover:scale-110 transition-transform duration-300">
-                <div className="relative">
-                  <Dumbbell className="h-14 w-14 text-primary animate-bounce-slow" />
-                  <Sparkles className="h-5 w-5 text-orange-400 absolute -top-1 -right-1 animate-ping" />
-                </div>
+              <div className="relative">
+                <Dumbbell className="h-14 w-14 text-primary animate-bounce-slow" />
+                <Sparkles className="h-5 w-5 text-orange-400 absolute -top-1 -right-1 animate-ping" />
+              </div>
             </Link>
             <h2 className="text-4xl font-extrabold text-gray-900 mb-2">
               Chào mừng trở lại! 👋
@@ -135,20 +139,20 @@ const Login = () => {
                   type="text"
                   className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 sm:text-sm"
                   placeholder="Nhập tên đăng nhập"
-                  {...register('username', { 
-                      required: 'Vui lòng nhập tên đăng nhập'
+                  {...register('username', {
+                    required: 'Vui lòng nhập tên đăng nhập'
                   })}
                 />
                 {errors.username && <p className="text-red-500 text-xs mt-2 animate-fade-in">{errors.username.message}</p>}
               </div>
 
               <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                 <div className="flex items-center justify-between mb-2">
-                    <label htmlFor="password" className="block text-sm font-semibold text-gray-700">Mật khẩu</label>
-                    <a href="#" className="text-sm font-medium text-primary hover:text-orange-700 hover:underline transition-all duration-300">
-                      Quên mật khẩu?
-                    </a>
-                 </div>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="password" className="block text-sm font-semibold text-gray-700">Mật khẩu</label>
+                  <a href="#" className="text-sm font-medium text-primary hover:text-orange-700 hover:underline transition-all duration-300">
+                    Quên mật khẩu?
+                  </a>
+                </div>
                 <input
                   id="password"
                   type="password"
@@ -200,24 +204,24 @@ const Login = () => {
                 </div>
               </div>
 
-            <div className="mt-6 flex justify-center transform hover:scale-105 transition-transform duration-300">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                shape="pill"
-                size="large"
-              />
-            </div>
+              <div className="mt-6 flex justify-center transform hover:scale-105 transition-transform duration-300">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  shape="pill"
+                  size="large"
+                />
+              </div>
             </div>
           </div>
-          
+
           <div className="mt-8 text-center">
-              <p className="text-gray-600">
-                  Bạn chưa có tài khoản?{' '}
-                  <Link to="/register" className="font-bold text-primary hover:text-orange-700 hover:underline transition-all duration-300">
-                      Đăng ký ngay →
-                  </Link>
-              </p>
+            <p className="text-gray-600">
+              Bạn chưa có tài khoản?{' '}
+              <Link to="/register" className="font-bold text-primary hover:text-orange-700 hover:underline transition-all duration-300">
+                Đăng ký ngay →
+              </Link>
+            </p>
           </div>
         </div>
       </div>
@@ -233,23 +237,23 @@ const Login = () => {
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
         <div className="absolute bottom-0 left-0 right-0 p-12 text-white animate-slide-up">
-            <div className="max-w-md">
-              <h2 className="text-5xl font-bold mb-4 leading-tight">
-                Không có áp lực,<br/>
-                <span className="text-orange-300">Không có kim cương.</span>
-              </h2>
-              <p className="text-xl text-orange-100 leading-relaxed">
-                Hãy bắt đầu hành trình thay đổi bản thân ngay hôm nay.
-              </p>
-              <div className="mt-8 flex items-center space-x-4">
-                <div className="flex -space-x-2">
-                  {[1,2,3,4].map(i => (
-                    <div key={i} className="w-10 h-10 rounded-full bg-orange-400 border-2 border-white"></div>
-                  ))}
-                </div>
-                <p className="text-sm text-orange-200">+10,000 thành viên đã tham gia</p>
+          <div className="max-w-md">
+            <h2 className="text-5xl font-bold mb-4 leading-tight">
+              Không có áp lực,<br />
+              <span className="text-orange-300">Không có kim cương.</span>
+            </h2>
+            <p className="text-xl text-orange-100 leading-relaxed">
+              Hãy bắt đầu hành trình thay đổi bản thân ngay hôm nay.
+            </p>
+            <div className="mt-8 flex items-center space-x-4">
+              <div className="flex -space-x-2">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="w-10 h-10 rounded-full bg-orange-400 border-2 border-white"></div>
+                ))}
               </div>
+              <p className="text-sm text-orange-200">+10,000 thành viên đã tham gia</p>
             </div>
+          </div>
         </div>
       </div>
     </div>

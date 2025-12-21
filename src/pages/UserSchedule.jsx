@@ -94,7 +94,7 @@ const UserSchedule = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-orange-50">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)' }}>
         <div className="text-center">
           <Calendar className="w-12 h-12 text-primary animate-pulse mx-auto mb-4" />
           <p className="text-gray-600">Đang tải lịch tập...</p>
@@ -104,7 +104,7 @@ const UserSchedule = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(to bottom right, #FED7AA, #F4EDDF, #FED7AA)' }}>
       {/* Header */}
       <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-8 px-6">
         <div className="max-w-6xl mx-auto">
