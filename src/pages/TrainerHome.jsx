@@ -48,11 +48,13 @@ const TrainerHome = () => {
   const [formData, setFormData] = useState({
     maKH: '',
     tenKH: '',
+    maLop: '', // New field for Class
     ngayBatDau: '', // Ngày bắt đầu PT dạng yyyy-mm-dd
     thuTap: [], // Array of selected days: ['2', '4', '6'] => lưu vào cột "thu"
     caTap: '',
     maKV: ''
   });
+  const [scheduleMode, setScheduleMode] = useState('pt'); // 'pt' | 'class'
   const [submitting, setSubmitting] = useState(false);
   const [conflictWarning, setConflictWarning] = useState(false);
   const [actionLoading, setActionLoading] = useState(false); // Cho nút Dừng/Hủy
@@ -171,11 +173,13 @@ const TrainerHome = () => {
     setFormData({
       maKH: khachHang?.maKH || '',
       tenKH: khachHang?.hoTen || khachHang?.tenKH || '',
+      maLop: '',
       ngayBatDau: defaultNgayBD, // Ngày bắt đầu PT
       thuTap: [], // Reset selected days
       caTap: '',
       maKV: ''
     });
+    setScheduleMode('pt');
     setConflictWarning(false);
     setShowAddModal(true);
   };
@@ -437,9 +441,17 @@ const TrainerHome = () => {
   };
 
   const handleAddLichTap = async () => {
-    if (!formData.maKH || !formData.ngayBatDau || formData.thuTap.length === 0 || !formData.caTap || !formData.maKV) {
-      setError('Vui lòng điền đầy đủ thông tin (khách hàng, ngày tập, thứ, ca tập, khu vực)');
-      return;
+    // Validate based on mode
+    if (scheduleMode === 'pt') {
+      if (!formData.maKH || !formData.ngayBatDau || formData.thuTap.length === 0 || !formData.caTap || !formData.maKV) {
+        setError('Vui lòng điền đầy đủ thông tin (khách hàng, ngày tập, thứ, ca tập, khu vực)');
+        return;
+      }
+    } else {
+      if (!formData.maLop || !formData.ngayBatDau || formData.thuTap.length === 0 || !formData.caTap || !formData.maKV) {
+        setError('Vui lòng điền đầy đủ thông tin (lớp học, ngày tập, thứ, ca tập, khu vực)');
+        return;
+      }
     }
 
     // Kiểm tra trùng lịch ở frontend trước khi gọi API
@@ -465,39 +477,66 @@ const TrainerHome = () => {
       return;
     }
 
+
     try {
       setSubmitting(true);
       setError('');
 
-      const result = await trainerService.taoLichPT({
-        maKH: formData.maKH,
-        ngayTap: formData.ngayBatDau, // Backend mong đợi "ngayTap" dạng yyyy-MM-dd
-        caTap: formData.caTap,
-        maKV: formData.maKV
-      });
+      // For PT mode: create ONE schedule with all selected days concatenated
+      if (scheduleMode === 'pt') {
+        // Concatenate all selected days into a string (e.g., "246CN")
+        const thuString = formData.thuTap.join('');
 
-      if (result.success) {
-        setSuccessMsg(result.message || 'Tạo lịch PT thành công!');
-        setShowAddModal(false);
-        fetchAllData(); // Refresh dữ liệu để cập nhật lưới
-        setTimeout(() => setSuccessMsg(''), 3000);
-      } else {
-        // Hiển thị thông báo lỗi từ backend
-        const errorMsg = result.message || 'Không thể tạo lịch PT';
-        if (errorMsg.toLowerCase().includes('trùng') || errorMsg.toLowerCase().includes('xung đột') || errorMsg.toLowerCase().includes('conflict')) {
-          setError(`⚠️ TRÙNG LỊCH! ${errorMsg}`);
+        const result = await trainerService.taoLichPT({
+          maKH: formData.maKH,
+          ngayBatDau: formData.ngayBatDau,
+          thuTap: thuString,  // Send concatenated days (e.g., "246CN")
+          caTap: formData.caTap,
+          maKV: formData.maKV
+        });
+
+        if (result.success) {
+          setSuccessMsg(`✅ ${result.message || 'Đã tạo lịch PT thành công!'}`);
+          setShowAddModal(false);
+          fetchAllData(); // Refresh data
+          setTimeout(() => setSuccessMsg(''), 3000);
         } else {
+          setError(result.message || 'Không thể tạo lịch PT');
+        }
+      } else {
+        // Class mode: create schedule for the first selected day only
+        const startDate = new Date(formData.ngayBatDau);
+        const selectedDay = formData.thuTap[0];
+        const targetDate = new Date(startDate);
+        const currentDay = startDate.getDay();
+        const targetDayNum = selectedDay === 'CN' ? 0 : parseInt(selectedDay) - 1;
+
+        let daysToAdd = targetDayNum - currentDay;
+        if (daysToAdd < 0) daysToAdd += 7;
+
+        targetDate.setDate(startDate.getDate() + daysToAdd);
+        const ngayTapFormatted = targetDate.toISOString().split('T')[0];
+
+        const result = await trainerService.taoLichLop({
+          maLop: formData.maLop,
+          ngayTap: ngayTapFormatted,
+          caTap: formData.caTap,
+          maKV: formData.maKV
+        });
+
+        if (result.success) {
+          setSuccessMsg(result.message || 'Tạo lịch Lớp thành công!');
+          setShowAddModal(false);
+          fetchAllData();
+          setTimeout(() => setSuccessMsg(''), 3000);
+        } else {
+          const errorMsg = result.message || 'Không thể tạo lịch Lớp';
           setError(errorMsg);
         }
       }
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Lỗi khi thêm lịch tập';
-      // Kiểm tra nếu là lỗi trùng lịch
-      if (errorMsg.toLowerCase().includes('trùng') || errorMsg.toLowerCase().includes('xung đột') || errorMsg.toLowerCase().includes('conflict') || errorMsg.toLowerCase().includes('đã có')) {
-        setError(`⚠️ TRÙNG LỊCH! ${errorMsg}`);
-      } else {
-        setError(errorMsg);
-      }
+      setError(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -612,7 +651,7 @@ const TrainerHome = () => {
               <div className={`text-sm mt-2 font-medium ${isDarkMode ? 'text-gray-200' : 'text-white/90'}`}>Khách hàng PT</div>
             </div>
             <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/20 border-white/30'} backdrop-blur-xl rounded-2xl p-5 text-center border shadow-xl`}>
-              <div className="text-4xl font-extrabold tracking-tight">{lopList.length}</div>
+              <div className="text-4xl font-extrabold tracking-tight">{lopList.filter(l => !l.ngayKT || new Date(l.ngayKT) >= new Date()).length}</div>
               <div className={`text-sm mt-2 font-medium ${isDarkMode ? 'text-gray-200' : 'text-white/90'}`}>Lớp phụ trách</div>
             </div>
             <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/20 border-white/30'} backdrop-blur-xl rounded-2xl p-5 text-center border shadow-xl`}>
@@ -628,7 +667,7 @@ const TrainerHome = () => {
             {[
               { key: 'schedule', label: 'Lịch tập PT', icon: Grid3X3, count: lichTapList.length },
               { key: 'customers', label: 'Khách hàng PT', icon: Users, count: khachHangList.length },
-              { key: 'classes', label: 'Lớp phụ trách', icon: FileText, count: lopList.length }
+              { key: 'classes', label: 'Lớp phụ trách', icon: FileText, count: lopList.filter(l => !l.ngayKT || new Date(l.ngayKT) >= new Date()).length }
             ].map(tab => {
               const TabIcon = tab.icon;
               return (
@@ -1021,33 +1060,38 @@ const TrainerHome = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {lopList.map((lop, idx) => (
-                  <div
-                    key={lop.maLop || idx}
-                    className="border rounded-xl p-4 hover:shadow-md transition-all"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-bold text-gray-800 text-lg">{lop.tenLop}</h3>
-                        <div className="text-sm text-gray-500 mt-1">Mã lớp: {lop.maLop}</div>
-                        {lop.boMon && (
-                          <div className="text-sm text-blue-600 mt-1">Bộ môn: {lop.boMon.tenBM}</div>
-                        )}
+                {lopList.map((lop, idx) => {
+                  const isExpired = lop.ngayKT ? new Date(lop.ngayKT) < new Date() : false;
+                  return (
+                    <div
+                      key={lop.maLop || idx}
+                      className={`border rounded-xl p-4 hover:shadow-md transition-all ${isExpired ? 'bg-gray-50 border-gray-200 opacity-60 grayscale' : 'bg-white'}`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-bold text-gray-800 text-lg">{lop.tenLop}</h3>
+                          <div className="text-sm text-gray-500 mt-1">Mã lớp: {lop.maLop}</div>
+                          {lop.boMon && (
+                            <div className="text-sm text-blue-600 mt-1">Bộ môn: {lop.boMon.tenBM}</div>
+                          )}
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${isExpired
+                          ? 'bg-red-100 text-red-700'
+                          : lop.tinhTrangLop === 'ChuaDay'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                          {isExpired ? 'Đã hết hạn' : (lop.tinhTrangLop === 'ChuaDay' ? 'Còn chỗ' : 'Đã đầy')}
+                        </span>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${lop.tinhTrangLop === 'ChuaDay'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-yellow-100 text-yellow-700'
-                        }`}>
-                        {lop.tinhTrangLop === 'ChuaDay' ? 'Còn chỗ' : 'Đã đầy'}
-                      </span>
+                      <div className="mt-3 text-sm text-gray-600">
+                        <div>Sĩ số tối đa: {lop.slToiDa || '-'}</div>
+                        <div>Từ: {lop.ngayBD} - {lop.ngayKT}</div>
+                        {lop.moTa && <div className="mt-2 text-gray-500">{lop.moTa}</div>}
+                      </div>
                     </div>
-                    <div className="mt-3 text-sm text-gray-600">
-                      <div>Sĩ số tối đa: {lop.slToiDa || '-'}</div>
-                      <div>Từ: {lop.ngayBD} - {lop.ngayKT}</div>
-                      {lop.moTa && <div className="mt-2 text-gray-500">{lop.moTa}</div>}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
@@ -1075,68 +1119,156 @@ const TrainerHome = () => {
               </div>
 
               <div className="p-6 space-y-5">
-                {/* Mã Khách hàng - Dropdown */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Khách hàng <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.maKH}
-                    onChange={(e) => handleSelectKhachHang(e.target.value)}
-                    className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                {/* Tabs selection */}
+                <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
+                  <button
+                    className={`flex-1 py-2 rounded-lg font-medium transition-all ${scheduleMode === 'pt' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+                    onClick={() => setScheduleMode('pt')}
                   >
-                    <option value="">-- Chọn khách hàng --</option>
-                    {getKhachHangOptions().map(kh => (
-                      <option key={kh.maCTDK || kh.maKH} value={kh.maKH}>
-                        {kh.maKH} - {kh.tenKH || kh.hoTen} {kh.tenDV ? `(${kh.tenDV})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">Chọn khách hàng đã đăng ký dịch vụ PT với bạn</p>
+                    Khách hàng PT
+                  </button>
+                  <button
+                    className={`flex-1 py-2 rounded-lg font-medium transition-all ${scheduleMode === 'class' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+                    onClick={() => setScheduleMode('class')}
+                  >
+                    Lớp học
+                  </button>
+                </div>
 
-                  {/* Hiển thị thông tin chi tiết khi đã chọn */}
-                  {formData.maKH && (
-                    <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                      {(() => {
-                        const selectedKH = getKhachHangOptions().find(k => k.maKH === formData.maKH);
-                        if (!selectedKH) return null;
-                        return (
-                          <div className="space-y-1 text-sm">
-                            {selectedKH.tenDV && (
-                              <div className="flex items-center gap-2">
-                                <BookOpen className="w-4 h-4 text-primary" />
-                                <span className="text-gray-700"><strong>Dịch vụ:</strong> {selectedKH.tenDV}</span>
-                              </div>
-                            )}
-                            {(selectedKH.ngayBD || selectedKH.ngayKT) && (
-                              <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-primary" />
-                                <span className="text-gray-700">
-                                  <strong>Thời hạn:</strong> {selectedKH.ngayBD ? new Date(selectedKH.ngayBD).toLocaleDateString('vi-VN') : '-'} → {selectedKH.ngayKT ? new Date(selectedKH.ngayKT).toLocaleDateString('vi-VN') : '-'}
-                                </span>
-                              </div>
-                            )}
+                {/* Mã Khách hàng - Dropdown (Only show in PT Mode) */}
+                {scheduleMode === 'pt' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Khách hàng <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.maKH}
+                      onChange={(e) => handleSelectKhachHang(e.target.value)}
+                      className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                    >
+                      <option value="">-- Chọn khách hàng --</option>
+                      {getKhachHangOptions().map(kh => (
+                        <option key={kh.maCTDK || kh.maKH} value={kh.maKH}>
+                          {kh.maKH} - {kh.tenKH || kh.hoTen} {kh.tenDV ? `(${kh.tenDV})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Chọn khách hàng đã đăng ký dịch vụ PT với bạn</p>
+
+                    {/* Hiển thị thông tin chi tiết khi đã chọn */}
+                    {formData.maKH && (
+                      <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                        {(() => {
+                          const selectedKH = getKhachHangOptions().find(k => k.maKH === formData.maKH);
+                          if (!selectedKH) return null;
+                          return (
+                            <div className="space-y-1 text-sm">
+                              {selectedKH.tenDV && (
+                                <div className="flex items-center gap-2">
+                                  <BookOpen className="w-4 h-4 text-primary" />
+                                  <span className="text-gray-700"><strong>Dịch vụ:</strong> {selectedKH.tenDV}</span>
+                                </div>
+                              )}
+                              {(selectedKH.ngayBD || selectedKH.ngayKT) && (
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-primary" />
+                                  <span className="text-gray-700">
+                                    <strong>Thời hạn:</strong> {selectedKH.ngayBD ? new Date(selectedKH.ngayBD).toLocaleDateString('vi-VN') : '-'} → {selectedKH.ngayKT ? new Date(selectedKH.ngayKT).toLocaleDateString('vi-VN') : '-'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Lớp học - Dropdown (Only show in Class Mode) */}
+                {scheduleMode === 'class' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Lớp học <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.maLop}
+                      onChange={(e) => {
+                        const selectedMaLop = e.target.value;
+                        const selectedLop = lopList.find(l => l.maLop === selectedMaLop);
+
+                        let newFormData = { ...formData, maLop: selectedMaLop };
+
+                        if (selectedLop && selectedLop.ngayBD) {
+                          const date = new Date(selectedLop.ngayBD);
+                          const dayOfWeek = date.getDay();
+                          const thuValue = dayOfWeek === 0 ? 'CN' : String(dayOfWeek + 1);
+
+                          newFormData.ngayBatDau = selectedLop.ngayBD;
+                          newFormData.thuTap = [thuValue];
+                        }
+
+                        setFormData(newFormData);
+                      }}
+                      className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                    >
+                      <option value="">-- Chọn lớp học --</option>
+                      {lopList
+                        .filter(lop => {
+                          const isExpired = lop.ngayKT ? new Date(lop.ngayKT) < new Date() : false;
+                          return !isExpired;
+                        })
+                        .map(lop => (
+                          <option key={lop.maLop} value={lop.maLop}>
+                            {lop.tenLop} (Sĩ số: {lop.slToiDa})
+                          </option>
+                        ))}
+                    </select>
+                    {formData.maLop && (() => {
+                      const lop = lopList.find(l => l.maLop === formData.maLop);
+                      if (!lop) return null;
+                      return (
+                        <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm space-y-2">
+                          <div>
+                            <div className="font-bold text-blue-800">{lop.tenLop}</div>
+                            <div className="text-blue-700 mt-1">
+                              Bộ môn: {lop.boMon?.tenBM || '-'}
+                            </div>
+                            <div className="text-blue-700">
+                              Thời gian: {new Date(lop.ngayBD).toLocaleDateString('vi-VN')} - {new Date(lop.ngayKT).toLocaleDateString('vi-VN')}
+                            </div>
                           </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-                </div>
 
-                {/* Tên Khách hàng - Text Input */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Tên Khách hàng
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.tenKH}
-                    onChange={(e) => setFormData({ ...formData, tenKH: e.target.value })}
-                    className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                    placeholder="Nhập tên khách hàng (tự động điền khi chọn)"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Tự động điền khi chọn khách hàng hoặc bạn có thể nhập thủ công</p>
-                </div>
+                          {/* Hiển thị Ghi chú */}
+                          {lop.ghiChu && (
+                            <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200 text-sm">
+                              <div className="font-bold text-yellow-800 mb-1">📝 Ghi chú:</div>
+                              <div className="text-yellow-700 italic">{lop.ghiChu}</div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )
+                }
+
+                {/* Tên Khách hàng - Text Input (Only show in PT Mode) */}
+                {scheduleMode === 'pt' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Tên Khách hàng
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.tenKH}
+                      onChange={(e) => setFormData({ ...formData, tenKH: e.target.value })}
+                      className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                      placeholder="Nhập tên khách hàng (tự động điền khi chọn)"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Tự động điền khi chọn khách hàng hoặc bạn có thể nhập thủ công</p>
+                  </div>
+                )}
 
                 {/* Ngày tập - Date Picker (Backend yêu cầu ngày cụ thể) */}
                 <div>
@@ -1146,6 +1278,8 @@ const TrainerHome = () => {
                   <input
                     type="date"
                     value={formData.ngayBatDau}
+                    readOnly={scheduleMode === 'class'} // Read-only for Class mode
+                    disabled={scheduleMode === 'class'} // Disabled for Class mode to prevent editing
                     onChange={(e) => {
                       const selectedDate = e.target.value;
                       // Tự động xác định thứ từ ngày đã chọn
@@ -1176,7 +1310,7 @@ const TrainerHome = () => {
                   )}
 
                   {/* Hiển thị thời hạn PT của khách hàng đã chọn */}
-                  {formData.maKH && (() => {
+                  {scheduleMode === 'pt' && formData.maKH && (() => {
                     const kh = getKhachHangOptions().find(k => k.maKH === formData.maKH);
                     if (kh?.ngayBD || kh?.ngayKT) {
                       return (
@@ -1293,7 +1427,7 @@ const TrainerHome = () => {
                 </button>
                 <button
                   onClick={handleAddLichTap}
-                  disabled={submitting || !formData.maKH || !formData.ngayBatDau || formData.thuTap.length === 0 || !formData.caTap || !formData.maKV}
+                  disabled={submitting || (scheduleMode === 'pt' ? !formData.maKH : !formData.maLop) || !formData.ngayBatDau || formData.thuTap.length === 0 || !formData.caTap || !formData.maKV}
                   className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {submitting ? (

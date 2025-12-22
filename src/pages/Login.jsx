@@ -27,6 +27,8 @@ const Login = () => {
           navigate('/staff/home');
         } else if (role === 'user') {
           navigate('/user/home');
+        } else if (role === 'manager') {
+          navigate('/manager/home');
         } else {
           // Fallback: default to user home
           navigate('/user/home');
@@ -69,6 +71,8 @@ const Login = () => {
           navigate('/staff/home');
         } else if (role === 'user') {
           navigate('/user/home');
+        } else if (role === 'manager') {
+          navigate('/manager/home');
         } else {
           // Fallback: default to user home
           navigate('/user/home');

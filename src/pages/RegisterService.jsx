@@ -23,6 +23,10 @@ const RegisterService = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState(1); // 1: Chọn bộ môn, 2: Chọn dịch vụ, 3: Chọn PT/Lớp
+  const [showPTModal, setShowPTModal] = useState(false);
+  const [currentServiceForPT, setCurrentServiceForPT] = useState(null);
+  const [showClassModal, setShowClassModal] = useState(false);
+  const [currentServiceForClass, setCurrentServiceForClass] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -83,9 +87,17 @@ const RegisterService = () => {
       const res = await dichVuGymService.getChonLop(maDV);
       const classes = res.dsLopChuaDay || res.dsLop || [];
       setClassOptions((s) => ({ ...s, [maDV]: classes }));
+      setCurrentServiceForClass(maDV);
+      setShowClassModal(true);
     } catch (err) {
       setError(err.response?.data || err.message || 'Lỗi khi lấy lớp');
     }
+  };
+
+  const selectClass = (maDV, classId) => {
+    setSelectedClassByDV(s => ({ ...s, [maDV]: classId }));
+    setShowClassModal(false);
+    setCurrentServiceForClass(null);
   };
 
   const choosePTForDV = async (maDV) => {
@@ -93,10 +105,18 @@ const RegisterService = () => {
       const res = await dichVuGymService.getChonPT(maDV);
       const trainers = res.dsTrainer || res.ds || res;
       setTrainerOptions((s) => ({ ...s, [maDV]: trainers }));
+      setCurrentServiceForPT(maDV);
+      setShowPTModal(true);
       setStep(3);
     } catch (err) {
       setError(err.response?.data || err.message || 'Lỗi khi lấy PT');
     }
+  };
+
+  const selectTrainer = (maDV, trainerId) => {
+    setSelectedTrainerByDV(s => ({ ...s, [maDV]: trainerId }));
+    setShowPTModal(false);
+    setCurrentServiceForPT(null);
   };
 
   const handleRegister = async () => {
@@ -302,43 +322,8 @@ const RegisterService = () => {
         </div>
       )}
 
-      <div className="max-w-[1800px] mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex gap-6">
-          {/* Left Promo Banner */}
-          <aside className="w-64 flex-shrink-0 hidden 2xl:block">
-            <div className="sticky top-6 space-y-6">
-              {/* Gym PT 30 Days Promo Banner */}
-              <div className="bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-2xl p-6 text-white shadow-2xl overflow-hidden relative">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
-                <div className="relative z-10">
-                  <Star className="w-10 h-10 mb-3 fill-current" />
-                  <h3 className="text-2xl font-extrabold mb-2">Phổ biến nhất!</h3>
-                  <p className="text-lg text-white font-bold mb-1">Gym PT 30 ngày</p>
-                  <p className="text-sm text-white/90 mb-4">Gói tập luyện cá nhân được yêu thích nhất</p>
-                  <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 border border-white/30">
-                    <p className="text-xs font-semibold">✨ Ưu điểm nổi bật:</p>
-                    <ul className="text-xs mt-2 space-y-1">
-                      <li>• Huấn luyện 1-1 cá nhân</li>
-                      <li>• Lịch tập linh hoạt</li>
-                      <li>• Hiệu quả tối ưu</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              {/* Trust Badge */}
-              <div className="bg-white rounded-2xl p-6 shadow-lg">
-                <div className="text-center">
-                  <Award className="w-12 h-12 text-orange-500 mx-auto mb-3" />
-                  <h4 className="font-bold text-gray-800 mb-2">Đã có</h4>
-                  <div className="text-4xl font-extrabold text-primary mb-1">10,000+</div>
-                  <p className="text-sm text-gray-600">Thành viên tin tưởng</p>
-                </div>
-              </div>
-            </div>
-          </aside>
-
           {/* Main Content */}
           <div className="flex-1 min-w-0">
             {/* Bộ môn Selection */}
@@ -394,9 +379,113 @@ const RegisterService = () => {
               </h2>
 
               {dichVuList.length === 0 ? (
-                <div className="text-center py-16">
-                  <Dumbbell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">Chọn bộ môn để xem các gói dịch vụ</p>
+                <div className="flex items-center justify-center py-16">
+                  <div className="max-w-4xl w-full">
+                    {/* Gym PT 30 Days Promo Banner */}
+                    <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+                      {/* Popular Ribbon */}
+                      <div className="absolute top-6 -left-12 z-30 bg-gradient-to-r from-red-600 to-orange-500 text-white px-16 py-2 transform -rotate-45 shadow-lg">
+                        <div className="flex items-center gap-2 justify-center">
+                          <Star className="w-4 h-4 fill-current" />
+                          <span className="text-sm font-extrabold tracking-wide">PHỔ BIẾN NHẤT</span>
+                          <Star className="w-4 h-4 fill-current" />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col md:flex-row">
+                        {/* Left Side - Image */}
+                        <div className="md:w-1/2 relative">
+                          <img
+                            src="/images/Gym/1_Gym_PT.jpg"
+                            alt="Gym PT Training"
+                            className="w-full h-full object-cover min-h-[400px]"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent to-orange-600/30"></div>
+                        </div>
+
+                        {/* Right Side - Content */}
+                        <div className="md:w-1/2 bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 p-8 md:p-10 text-white relative">
+                          {/* Decorative circles */}
+                          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20"></div>
+                          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-16 -mb-16"></div>
+
+                          <div className="relative z-10">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                                <Award className="w-8 h-8" />
+                              </div>
+                              <div>
+                                <div className="text-sm font-semibold text-white/90">Gói được yêu thích nhất</div>
+                                <div className="text-xs text-white/70">Hơn 5,000+ thành viên đã chọn</div>
+                              </div>
+                            </div>
+
+                            <h3 className="text-4xl font-extrabold mb-3 leading-tight">
+                              Gym PT<br />30 ngày
+                            </h3>
+
+                            <p className="text-lg text-white/95 mb-6 font-medium">
+                              Gói tập luyện cá nhân với hiệu quả tối ưu
+                            </p>
+
+                            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-5 border border-white/30 mb-6">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Sparkles className="w-5 h-5" />
+                                <p className="font-bold text-base">Ưu điểm nổi bật</p>
+                              </div>
+                              <ul className="space-y-3">
+                                <li className="flex items-start gap-3">
+                                  <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                  <span className="text-sm leading-relaxed">Huấn luyện 1-1 cá nhân với PT chuyên nghiệp</span>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                  <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                  <span className="text-sm leading-relaxed">Lịch tập linh hoạt, phù hợp mọi lịch trình</span>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                  <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                  <span className="text-sm leading-relaxed">Kết quả rõ rệt chỉ sau 30 ngày</span>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                  <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                  <span className="text-sm leading-relaxed">Chế độ dinh dưỡng cá nhân hóa miễn phí</span>
+                                </li>
+                              </ul>
+                            </div>
+
+                            {/* CTA Button */}
+                            <button
+                              onClick={() => {
+                                // Find Gym sport and load its services
+                                const gymBoMon = boMonList.find(b =>
+                                  b.tenBM?.toLowerCase().includes('gym')
+                                );
+                                if (gymBoMon) {
+                                  loadDichVu(gymBoMon.maBM);
+                                  // Scroll to services section
+                                  setTimeout(() => {
+                                    window.scrollTo({
+                                      top: 400,
+                                      behavior: 'smooth'
+                                    });
+                                  }, 300);
+                                }
+                              }}
+                              className="w-full bg-white hover:bg-gray-50 text-orange-600 font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 group"
+                            >
+                              <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                              <span className="text-lg">Đăng ký ngay</span>
+                              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                            </button>
+
+                            <p className="text-xs text-white/80 text-center mt-3">
+                              Nhấn để xem chi tiết và đăng ký gói này
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -537,81 +626,8 @@ const RegisterService = () => {
                         </div>
 
                         {/* Expanded Options */}
-                        {(classOptions[dv.maDV]?.length > 0 || trainerOptions[dv.maDV]?.length > 0) && (
-                          <div className="px-4 pb-4">
-                            {/* Class Options */}
-                            {classOptions[dv.maDV]?.length > 0 && (
-                              <div className="mb-3">
-                                <div className="text-xs font-bold mb-2 flex items-center gap-1.5 text-blue-600">
-                                  <Users className="w-3 h-3" />
-                                  Chọn lớp:
-                                </div>
-                                <div className="space-y-1.5">
-                                  {classOptions[dv.maDV].slice(0, 2).map(lp => (
-                                    <button
-                                      key={lp.maLop}
-                                      onClick={() => setSelectedClassByDV(s => ({ ...s, [dv.maDV]: lp.maLop }))}
-                                      className={`w-full p-2 rounded-lg border text-left transition-all text-xs ${selectedClassByDV[dv.maDV] === lp.maLop
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-blue-300'
-                                        }`}
-                                    >
-                                      <div className="font-semibold text-gray-800">{lp.tenLop}</div>
-                                      {lp.slToiDa && (
-                                        <div className="text-blue-600 mt-0.5">
-                                          {lp.slHienTai || 0}/{lp.slToiDa} người
-                                        </div>
-                                      )}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Trainer Options */}
-                            {trainerOptions[dv.maDV]?.length > 0 && (
-                              <div>
-                                <div className="text-xs font-bold mb-2 flex items-center gap-1.5 text-orange-600">
-                                  <UserCheck className="w-3 h-3" />
-                                  Chọn PT:
-                                </div>
-                                <div className="space-y-1.5">
-                                  {trainerOptions[dv.maDV].slice(0, 2).map(tv => {
-                                    const trainerId = tv.maNV || tv.id || tv.nvId;
-                                    const trainerName = tv.tenNV || tv.tenNhanVien || tv.hoTen || tv.name || trainerId;
-                                    const isSelectedTrainer = selectedTrainerByDV[dv.maDV] === trainerId;
-
-                                    return (
-                                      <button
-                                        key={trainerId || Math.random()}
-                                        onClick={() => setSelectedTrainerByDV(s => ({ ...s, [dv.maDV]: trainerId }))}
-                                        className={`w-full p-2 rounded-lg border text-left transition-all ${isSelectedTrainer
-                                          ? 'border-orange-500 bg-orange-50'
-                                          : 'border-gray-200 hover:border-orange-300'
-                                          }`}
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isSelectedTrainer
-                                            ? 'bg-gradient-to-br from-orange-500 to-orange-600'
-                                            : 'bg-gray-200'
-                                            }`}>
-                                            <User className={`w-4 h-4 ${isSelectedTrainer ? 'text-white' : 'text-gray-500'}`} />
-                                          </div>
-                                          <div className="flex-1 min-w-0">
-                                            <div className="font-semibold text-xs text-gray-800 truncate">{trainerName}</div>
-                                            {tv.chuyenMon && (
-                                              <div className="text-xs text-orange-600 truncate">{tv.chuyenMon}</div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                        {/* Expanded Options - Inline Class List Removed */}
+                        {classOptions[dv.maDV]?.length > 0 && null}
                       </div>
                     );
                   })}
@@ -663,16 +679,18 @@ const RegisterService = () => {
                     <UserCheck className="w-4 h-4 text-orange-600" />
                     PT đã chọn
                   </div>
-                  {Object.entries(selectedTrainerByDV).map(([maDV, trainerId]) => {
-                    const dv = dichVuList.find(x => x.maDV === maDV);
-                    const trainer = trainerOptions[maDV]?.find(t => (t.maNV || t.id) === trainerId);
-                    return (
-                      <div key={maDV} className="text-sm text-gray-600">
-                        {trainer?.tenNV || trainer?.hoTen || trainerId}
-                        <span className="text-gray-400"> ({dv?.tenDV})</span>
-                      </div>
-                    );
-                  })}
+                  {Object.entries(selectedTrainerByDV)
+                    .filter(([_, trainerId]) => trainerId) // Only show if trainer is selected
+                    .map(([maDV, trainerId]) => {
+                      const dv = dichVuList.find(x => x.maDV === maDV);
+                      const trainer = trainerOptions[maDV]?.find(t => (t.maNV || t.id) === trainerId);
+                      return (
+                        <div key={maDV} className="text-sm text-gray-600">
+                          {trainer?.tenNV || trainer?.hoTen || trainerId}
+                          <span className="text-gray-400"> ({dv?.tenDV})</span>
+                        </div>
+                      );
+                    })}
                 </div>
               )}
 
@@ -733,6 +751,367 @@ const RegisterService = () => {
           </button>
         </div>
       </div>
+
+      {/* PT Selection Modal */}
+      {showPTModal && currentServiceForPT && trainerOptions[currentServiceForPT] && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <UserCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-extrabold">Chọn Personal Trainer</h2>
+                  <p className="text-orange-100 text-sm mt-1">
+                    {dichVuList.find(d => d.maDV === currentServiceForPT)?.tenDV}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPTModal(false);
+                  setCurrentServiceForPT(null);
+                }}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {trainerOptions[currentServiceForPT].map(trainer => {
+                  const trainerId = trainer.maNV || trainer.id || trainer.nvId;
+                  const trainerName = trainer.tenNV || trainer.tenNhanVien || trainer.hoTen || trainer.name || trainerId;
+                  const isSelected = selectedTrainerByDV[currentServiceForPT] === trainerId;
+
+                  return (
+                    <button
+                      key={trainerId || Math.random()}
+                      onClick={() => selectTrainer(currentServiceForPT, trainerId)}
+                      className={`relative p-6 rounded-2xl border-2 text-left transition-all duration-300 ${isSelected
+                        ? 'border-orange-500 bg-orange-50 shadow-lg scale-[1.02]'
+                        : 'border-gray-200 hover:border-orange-300 hover:shadow-md'
+                        }`}
+                    >
+                      {/* Selected Badge */}
+                      {isSelected && (
+                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" />
+                          Đã chọn
+                        </div>
+                      )}
+
+                      <div className="flex items-start gap-4 mb-4">
+                        {/* Avatar */}
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 ${isSelected
+                          ? 'bg-gradient-to-br from-orange-500 to-orange-600'
+                          : 'bg-gradient-to-br from-gray-300 to-gray-400'
+                          }`}>
+                          <User className={`w-8 h-8 ${isSelected ? 'text-white' : 'text-gray-600'}`} />
+                        </div>
+
+                        {/* Name */}
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-gray-800 mb-1">{trainerName}</h3>
+
+                          {/* Gender & DOB */}
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                            {trainer.gioiTinh && (
+                              <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                                <span>{trainer.gioiTinh === 'Nam' ? '👨' : '👩'}</span>
+                                <span className="font-medium">{trainer.gioiTinh}</span>
+                              </div>
+                            )}
+                            {trainer.ngaySinh && (
+                              <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                                <span className="text-base">🎂</span>
+                                <span className="font-medium">{new Date(trainer.ngaySinh).toLocaleDateString('vi-VN')}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Details */}
+                      <div className="space-y-2.5 text-sm">
+                        {/* Experience */}
+                        {trainer.kinhNghiem && (
+                          <div className="flex items-start gap-2 text-gray-700">
+                            <Award className="w-4 h-4 mt-0.5 flex-shrink-0 text-orange-500" />
+                            <div>
+                              <div className="text-xs text-gray-500 font-medium">Kinh nghiệm</div>
+                              <div className="font-medium">{trainer.kinhNghiem}</div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Certifications */}
+                        {trainer.chungChi && (
+                          <div className="flex items-start gap-2 text-gray-700">
+                            <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-500" />
+                            <div>
+                              <div className="text-xs text-gray-500 font-medium">Chứng chỉ</div>
+                              <div className="font-medium">{trainer.chungChi}</div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Contact Info */}
+                        <div className="pt-2 border-t border-gray-200 space-y-1.5">
+                          {trainer.sdt && (
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <span className="text-base">📞</span>
+                              <span className="text-xs font-medium">{trainer.sdt}</span>
+                            </div>
+                          )}
+                          {trainer.email && (
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <span className="text-base">✉️</span>
+                              <span className="text-xs truncate font-medium">{trainer.email}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Select/Deselect Button */}
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        {!isSelected ? (
+                          <div className="text-center text-sm font-semibold text-orange-600 flex items-center justify-center gap-2 group-hover:gap-3 transition-all">
+                            <span>Chọn PT này</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              selectTrainer(currentServiceForPT, null); // Deselect logic
+                            }}
+                            className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors border border-red-200"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Hủy chọn
+                          </button>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 p-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  {trainerOptions[currentServiceForPT].length} PT có sẵn
+                </p>
+                <button
+                  onClick={() => {
+                    setShowPTModal(false);
+                    setCurrentServiceForPT(null);
+                  }}
+                  className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Class Selection Modal */}
+      {showClassModal && currentServiceForClass && classOptions[currentServiceForClass] && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-extrabold">Chọn Lớp Học</h2>
+                  <p className="text-blue-100 text-sm mt-1">
+                    {dichVuList.find(d => d.maDV === currentServiceForClass)?.tenDV}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowClassModal(false);
+                  setCurrentServiceForClass(null);
+                }}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {classOptions[currentServiceForClass]
+                  .filter(lop => !lop.ngayKT || new Date(lop.ngayKT) >= new Date().setHours(0, 0, 0, 0))
+                  .map(lop => {
+                    const isSelected = selectedClassByDV[currentServiceForClass] === lop.maLop;
+                    const slotsFilled = lop.slHienTai || 0;
+                    const slotsTotal = lop.slToiDa || 0;
+                    const percentFilled = slotsTotal > 0 ? (slotsFilled / slotsTotal) * 100 : 0;
+
+                    return (
+                      <button
+                        key={lop.maLop}
+                        onClick={() => selectClass(currentServiceForClass, lop.maLop)}
+                        className={`relative p-6 rounded-2xl border-2 text-left transition-all duration-300 ${isSelected
+                          ? 'border-blue-500 bg-blue-50 shadow-lg scale-[1.02]'
+                          : 'border-gray-200 hover:border-blue-300 hover:shadow-md'
+                          }`}
+                      >
+                        {/* Selected Badge */}
+                        {isSelected && (
+                          <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" />
+                            Đã chọn
+                          </div>
+                        )}
+
+                        <div className="flex items-start gap-4 mb-4">
+                          {/* Icon */}
+                          <div className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 ${isSelected
+                            ? 'bg-gradient-to-br from-blue-500 to-blue-600'
+                            : 'bg-gradient-to-br from-gray-100 to-gray-200'
+                            }`}>
+                            <Users className={`w-7 h-7 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
+                          </div>
+
+                          {/* Class Info */}
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-gray-800 mb-1">{lop.tenLop}</h3>
+                            {lop.moTa && (
+                              <div className="text-sm text-gray-600 line-clamp-2">{lop.moTa}</div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Instructor & Details */}
+                        <div className="space-y-3 pt-4 border-t border-gray-100">
+                          {/* Instructor */}
+                          {lop.tenGV && (
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                                <User className="w-4 h-4 text-orange-600" />
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-500 font-medium">Giáo viên</div>
+                                <div className="font-bold text-gray-800">{lop.tenGV}</div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* Schedule */}
+                            {lop.lichHoc && (
+                              <div className="bg-gray-50 p-2 rounded-lg">
+                                <div className="flex items-center gap-1.5 text-gray-500 mb-1">
+                                  <Calendar className="w-3.5 h-3.5" />
+                                  <span className="text-xs font-medium">Lịch học</span>
+                                </div>
+                                <div className="text-sm font-semibold text-gray-800">{lop.lichHoc}</div>
+                              </div>
+                            )}
+
+                            {/* Room */}
+                            {lop.phong && (
+                              <div className="bg-gray-50 p-2 rounded-lg">
+                                <div className="flex items-center gap-1.5 text-gray-500 mb-1">
+                                  <MapPin className="w-3.5 h-3.5" />
+                                  <span className="text-xs font-medium">Phòng</span>
+                                </div>
+                                <div className="text-sm font-semibold text-gray-800">{lop.phong}</div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Capacity */}
+                          {slotsTotal > 0 && (
+                            <div className="mt-2">
+                              <div className="flex items-center justify-between mb-1 text-xs">
+                                <span className="text-gray-600 font-medium">Sĩ số lớp</span>
+                                <span className={`font-bold ${percentFilled >= 90 ? 'text-red-600' : percentFilled >= 70 ? 'text-orange-600' : 'text-blue-600'}`}>
+                                  {slotsFilled}/{slotsTotal}
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div
+                                  className={`h-2 rounded-full transition-all duration-500 ${percentFilled >= 90 ? 'bg-red-500' : percentFilled >= 70 ? 'bg-orange-500' : 'bg-blue-500'}`}
+                                  style={{ width: `${percentFilled}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Select/Deselect Button */}
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          {!isSelected ? (
+                            <div className="text-center text-sm font-semibold text-blue-600 flex items-center justify-center gap-2 group-hover:gap-3 transition-all">
+                              <span>Chọn lớp này</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </div>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                selectClass(currentServiceForClass, null);
+                              }}
+                              className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors border border-red-200"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                              Hủy chọn
+                            </button>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 p-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  {classOptions[currentServiceForClass]
+                    .filter(lop => !lop.ngayKT || new Date(lop.ngayKT) >= new Date().setHours(0, 0, 0, 0))
+                    .length} lớp học có sẵn
+                </p>
+                <button
+                  onClick={() => {
+                    setShowClassModal(false);
+                    setCurrentServiceForClass(null);
+                  }}
+                  className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
