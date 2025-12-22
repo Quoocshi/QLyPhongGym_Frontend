@@ -1,0 +1,12 @@
+# Chuyển hướng các cuộc gọi API sang Backend Render
+[[redirects]]
+  from = "/api/*"
+  to = "https://vina-gym.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# Hỗ trợ React Router (tránh lỗi 404 khi nhấn F5 trang)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
