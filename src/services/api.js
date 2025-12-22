@@ -161,6 +161,12 @@ export const trainerService = {
         const response = await api.post('/trainer/tao-lich-pt', lichTapData);
         return response.data;
     },
+    // Tạo lịch lớp mới
+    taoLichLop: async (lichTapData) => {
+        // lichTapData: { maLop, ngayTap, caTap, maKV }
+        const response = await api.post('/trainer/tao-lich-lop', lichTapData);
+        return response.data;
+    },
     // Kiểm tra xung đột lịch
     kiemTraXungDot: async (ngay, caTap) => {
         const response = await api.post('/trainer/kiem-tra-xung-dot', { ngay, caTap });
@@ -209,6 +215,31 @@ export const staffService = {
     // Cập nhật trạng thái thiết bị
     updateEquipmentStatus: async (maTB, trangThaiMoi) => {
         const response = await api.put(`/staff/equipment/${maTB}/status`, { trangThai: trangThaiMoi });
+        return response.data;
+    }
+};
+
+export const managerService = {
+    // Thêm nhân viên mới
+    addNhanVien: async (nhanVienData) => {
+        // nhanVienData needs to match NhanVienRegisterDTO
+        const response = await api.post('/nhan-vien', nhanVienData);
+        return response.data;
+    },
+    // Lấy danh sách nhân viên
+    getAllNhanVien: async () => {
+        const response = await api.get('/nhan-vien');
+        return response.data;
+    },
+    // Lấy danh sách bộ môn (department)
+    getBoMonList: async () => {
+        const response = await api.get('/quan-ly-bo-mon/danh-sach-bo-mon');
+        return response.data;
+        return response.data;
+    },
+    // Thêm lớp mới
+    addLop: async (lopData) => {
+        const response = await api.post('/quan-ly-lop/them-lop', lopData);
         return response.data;
     }
 };
@@ -279,6 +310,10 @@ export function getRoleFromToken(token) {
     // Check for user keywords
     if (roleStr.includes('user') || roleStr.includes('khach') || roleStr === '1') {
         return 'user';
+    }
+    // Check for manager keywords (ROLE_ADMIN from backend)
+    if (roleStr.includes('admin') || roleStr.includes('quanly') || roleStr.includes('manager') || roleStr === '0') {
+        return 'manager';
     }
 
     return null;

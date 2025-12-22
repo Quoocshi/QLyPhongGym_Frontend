@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { userService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Calendar, Clock, MapPin, User, Dumbbell, 
+import {
+  Calendar, Clock, MapPin, User, Dumbbell,
   CheckCircle, AlertCircle, XCircle, ChevronLeft, ChevronRight,
   Users, Star, Filter, RefreshCw
 } from 'lucide-react';
@@ -61,17 +61,17 @@ const UserSchedule = () => {
 
   const getDayName = (thu) => {
     const dayMap = {
-      '2': 'Thứ 2', '3': 'Thứ 3', '4': 'Thứ 4', 
+      '2': 'Thứ 2', '3': 'Thứ 3', '4': 'Thứ 4',
       '5': 'Thứ 5', '6': 'Thứ 6', '7': 'Thứ 7', 'CN': 'Chủ nhật'
     };
-    
+
     if (!thu) return 'Chưa xác định';
-    
+
     // Handle format like "246" -> "Thứ 2, Thứ 4, Thứ 6"
     if (thu.length > 1 && !thu.includes(',')) {
       return thu.split('').map(d => dayMap[d] || d).join(', ');
     }
-    
+
     return dayMap[thu] || thu;
   };
 
@@ -119,7 +119,7 @@ const UserSchedule = () => {
                 <p className="text-orange-100 mt-1">Xem và theo dõi lịch tập đã đăng ký</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={fetchLichTap}
               className="p-3 bg-white/20 rounded-xl hover:bg-white/30 transition-all"
             >
@@ -174,11 +174,10 @@ const UserSchedule = () => {
               <button
                 key={f.key}
                 onClick={() => setFilter(f.key)}
-                className={`px-4 py-2 rounded-full font-medium transition-all ${
-                  filter === f.key
+                className={`px-4 py-2 rounded-full font-medium transition-all ${filter === f.key
                     ? 'bg-primary text-white shadow-lg'
                     : 'bg-white text-gray-600 hover:bg-gray-50 border'
-                }`}
+                  }`}
               >
                 {f.label} ({f.count})
               </button>
@@ -209,14 +208,14 @@ const UserSchedule = () => {
               const LoaiLichIcon = loaiLich.icon;
 
               return (
-                <div 
-                  key={lt.maLT || idx} 
+                <div
+                  key={lt.maLT || idx}
                   className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
                 >
                   <div className="flex">
                     {/* Left Color Bar */}
                     <div className={`w-2 ${loaiLich.bg}`}></div>
-                    
+
                     <div className="flex-1 p-6">
                       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         {/* Left: Main Info */}
@@ -237,7 +236,7 @@ const UserSchedule = () => {
                                 {trangThai.label}
                               </span>
                             </div>
-                            
+
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                               <div className="flex items-center gap-2 text-gray-600">
                                 <Calendar className="w-4 h-4 text-primary" />
@@ -270,7 +269,7 @@ const UserSchedule = () => {
                         <div className="flex flex-col items-end gap-2">
                           <div className="text-sm text-gray-500">Mã lịch</div>
                           <div className="text-lg font-bold text-primary">{lt.maLT}</div>
-                          
+
                           {lt.loaiLich?.toLowerCase() === 'pt' && (
                             <div className="flex items-center gap-1 text-orange-600 mt-2">
                               <Star className="w-4 h-4 fill-current" />

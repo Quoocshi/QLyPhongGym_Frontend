@@ -137,7 +137,7 @@ const UserHome = () => {
         console.log('📞 Calling userService.getLichTap()...');
         const lichTap = await userService.getLichTap();
         console.log('✅ Lịch tập data:', lichTap);
-        const lichTapArray = Array.isArray(lichTap) ? lichTap : (lichTap.dsLichTap || []);
+        const lichTapArray = Array.isArray(lichTap) ? lichTap : (lichTap.danhSachLichTap || []);
         console.log('📊 LichTap array:', lichTapArray);
         setLichTapList(lichTapArray);
       } catch (e) {
@@ -680,13 +680,13 @@ const UserHome = () => {
                               {getUpcomingSession().tenDichVu || getUpcomingSession().tenLop || 'Buổi tập'}
                             </span>
                           </div>
-                          {getUpcomingSession().tenTrainer && (
+                          {getUpcomingSession().tenNhanVien && (
                             <div className="flex items-center gap-4">
                               <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
                                 <User className="w-5 h-5 text-orange-600" strokeWidth={2} />
                               </div>
                               <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>
-                                HLV {getUpcomingSession().tenTrainer}
+                                HLV {getUpcomingSession().tenNhanVien}
                               </span>
                             </div>
                           )}
@@ -908,13 +908,17 @@ const UserHome = () => {
                                 <div className="space-y-1">
                                   {schedulesForDay.slice(0, 2).map((schedule, sIdx) => {
                                     const trangThai = getTrangThaiBadge(schedule.trangThai);
+                                    console.log('Schedule on grid:', schedule); // Debug log
                                     return (
                                       <button
                                         key={schedule.maLT || sIdx}
                                         onClick={() => openEventModal(schedule)}
-                                        className={`w-full px-1.5 py-1 rounded text-left text-xs ${trangThai.bg} ${trangThai.text} hover:shadow-sm transition-all truncate`}
+                                        className={`w-full px-2 py-1.5 rounded text-left text-xs font-semibold ${trangThai.bg} hover:shadow-md transition-all`}
+                                        style={{ color: '#1f2937' }} // Force dark text
                                       >
-                                        {schedule.tenDichVu || schedule.tenLop || schedule.maDV}
+                                        <div className="truncate">
+                                          {schedule.tenKhuVuc || schedule.tenLop || 'Lịch tập'}
+                                        </div>
                                       </button>
                                     );
                                   })}
@@ -1101,138 +1105,6 @@ const UserHome = () => {
                   )}
                 </div>
               )}
-
-              {/* Event Detail Modal - Modern Clean */}
-              {showEventModal && selectedEvent && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                  <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-3xl w-full max-w-md overflow-hidden`} style={{
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-                  }}>
-                    {/* Header - Clean Gradient */}
-                    <div className="p-6" style={{
-                      background: isDarkMode
-                        ? 'linear-gradient(135deg, #F97316 0%, #EA580C 50%, #DC2626 100%)'
-                        : 'linear-gradient(135deg, #F97316 0%, #EA580C 50%, #DC2626 100%)'
-                    }}>
-                      <div className="flex items-center justify-between text-white">
-                        <h2 className="text-xl font-bold flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-sm">
-                            <CalendarDays className="w-5 h-5" strokeWidth={2.5} />
-                          </div>
-                          <span>Chi tiết lịch tập</span>
-                        </h2>
-                        <button
-                          onClick={() => setShowEventModal(false)}
-                          className="p-2 hover:bg-white/15 rounded-xl transition-all"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-6 space-y-5">
-                      {/* Thông tin dịch vụ/lớp */}
-                      <div className={`p-5 ${isDarkMode ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-orange-50 border border-orange-100'} rounded-2xl`}>
-                        <div className={`font-bold text-xl ${isDarkMode ? 'text-orange-300' : 'text-gray-900'}`}>
-                          {selectedEvent.tenDichVu || selectedEvent.tenLop || 'Dịch vụ'}
-                        </div>
-                        <div className={`text-sm mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Mã: {selectedEvent.maDV || selectedEvent.maLop || '-'}</div>
-                      </div>
-
-                      {/* Ngày tập trong tuần */}
-                      <div className="space-y-3">
-                        <div className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                          <CalendarDays className="w-4 h-4" />
-                          Ngày tập trong tuần
-                        </div>
-                        <div className="flex gap-2 flex-wrap">
-                          {parseThuString(selectedEvent.thu || selectedEvent.ngayTap).map(d => {
-                            const dayInfo = DAYS_OF_WEEK.find(day => day.value === d);
-                            return (
-                              <span
-                                key={d}
-                                className={`px-4 py-2 rounded-xl text-sm font-bold ${isDarkMode ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-orange-100 text-orange-700 border border-orange-200'}`}
-                              >
-                                {dayInfo?.fullLabel || d}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Ca tập */}
-                      {selectedEvent.tenCaTap && (
-                        <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-100'}`}>
-                          <div className={`text-xs uppercase tracking-wider font-bold flex items-center gap-2 mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                            <Clock className="w-4 h-4" />
-                            Ca tập
-                          </div>
-                          <div className={`font-bold text-lg ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>{selectedEvent.tenCaTap}</div>
-                        </div>
-                      )}
-
-                      {/* Khu vực */}
-                      {selectedEvent.tenKhuVuc && (
-                        <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-100'}`}>
-                          <div className={`text-xs uppercase tracking-wider font-bold flex items-center gap-2 mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                            <MapPin className="w-4 h-4" />
-                            Khu vực
-                          </div>
-                          <div className={`font-bold text-lg ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>{selectedEvent.tenKhuVuc}</div>
-                        </div>
-                      )}
-
-                      {/* Trainer (nếu có) */}
-                      {selectedEvent.tenTrainer && (
-                        <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-100'}`}>
-                          <div className={`text-xs uppercase tracking-wider font-bold flex items-center gap-2 mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                            <User className="w-4 h-4" />
-                            Huấn luyện viên
-                          </div>
-                          <div className={`font-bold text-lg ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>{selectedEvent.tenTrainer}</div>
-                        </div>
-                      )}
-
-                      {/* Thời hạn */}
-                      {(selectedEvent.ngayBD || selectedEvent.ngayKT) && (
-                        <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
-                          <div className={`text-xs uppercase tracking-wider font-bold flex items-center gap-2 mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                            <Target className="w-4 h-4" />
-                            Thời hạn
-                          </div>
-                          <div className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            {selectedEvent.ngayBD ? new Date(selectedEvent.ngayBD).toLocaleDateString('vi-VN') : '?'} → {selectedEvent.ngayKT ? new Date(selectedEvent.ngayKT).toLocaleDateString('vi-VN') : '?'}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Trạng thái */}
-                      <div className={`flex items-center justify-between p-4 rounded-2xl ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
-                        <div className={`text-sm uppercase tracking-wider font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Trạng thái</div>
-                        {(() => {
-                          const trangThai = getTrangThaiBadge(selectedEvent.trangThai);
-                          return (
-                            <span className={`px-4 py-2 rounded-xl text-sm font-bold ${trangThai.bg} ${trangThai.text}`}>
-                              {trangThai.label}
-                            </span>
-                          );
-                        })()}
-                      </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div className={`p-6 border-t ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
-                      <button
-                        onClick={() => setShowEventModal(false)}
-                        className="w-full px-6 py-3.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                      >
-                        Đóng
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </main>
 
@@ -1305,6 +1177,191 @@ const UserHome = () => {
           </aside>
         </div>
       </div>
+
+      {/* Event Detail Modal */}
+      {showEventModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowEventModal(false)}>
+          <div
+            className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-8 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
+                    <Calendar className="w-7 h-7 text-white" strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                      Chi tiết lịch tập
+                    </h2>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
+                      Mã lịch: {selectedEvent.maLT}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowEventModal(false)}
+                  className={`p-2 rounded-xl ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} transition-colors`}
+                >
+                  <X className={`w-6 h-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-8 space-y-6">
+              {/* Status Badge */}
+              <div className="flex items-center gap-3">
+                <span className={`px-4 py-2 rounded-xl font-semibold text-sm ${selectedEvent.trangThai?.toLowerCase().includes('dang') || selectedEvent.trangThai?.toLowerCase().includes('mo')
+                  ? 'bg-green-100 text-green-700'
+                  : selectedEvent.trangThai?.toLowerCase().includes('tam') || selectedEvent.trangThai?.toLowerCase().includes('dung')
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : 'bg-red-100 text-red-700'
+                  }`}>
+                  {selectedEvent.trangThai || 'Đang hoạt động'}
+                </span>
+                <span className={`px-4 py-2 rounded-xl font-semibold text-sm ${selectedEvent.loaiLich === 'PT'
+                  ? 'bg-purple-100 text-purple-700'
+                  : 'bg-blue-100 text-blue-700'
+                  }`}>
+                  {selectedEvent.loaiLich === 'PT' ? 'Personal Training' : 'Lớp học'}
+                </span>
+              </div>
+
+              {/* Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Trainer/Instructor */}
+                {selectedEvent.tenNhanVien && (
+                  <div className={`p-5 rounded-2xl ${isDarkMode ? 'bg-gray-800/50' : 'bg-orange-50'}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <User className="w-5 h-5 text-orange-600" strokeWidth={2} />
+                      <span className={`text-xs uppercase tracking-wider font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {selectedEvent.loaiLich === 'PT' ? 'Huấn luyện viên' : 'Giảng viên'}
+                      </span>
+                    </div>
+                    <div className={`font-bold text-lg ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                      {selectedEvent.tenNhanVien}
+                    </div>
+                  </div>
+                )}
+
+                {/* Session Time */}
+                {selectedEvent.tenCaTap && (
+                  <div className={`p-5 rounded-2xl ${isDarkMode ? 'bg-gray-800/50' : 'bg-blue-50'}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <Clock className="w-5 h-5 text-blue-600" strokeWidth={2} />
+                      <span className={`text-xs uppercase tracking-wider font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Ca tập
+                      </span>
+                    </div>
+                    <div className={`font-bold text-lg ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                      {selectedEvent.tenCaTap}
+                    </div>
+                    {selectedEvent.moTaCaTap && (
+                      <div className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {selectedEvent.moTaCaTap}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Class Name */}
+                {selectedEvent.tenLop && (
+                  <div className={`p-5 rounded-2xl ${isDarkMode ? 'bg-gray-800/50' : 'bg-green-50'}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <BookOpen className="w-5 h-5 text-green-600" strokeWidth={2} />
+                      <span className={`text-xs uppercase tracking-wider font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Lớp học
+                      </span>
+                    </div>
+                    <div className={`font-bold text-lg ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                      {selectedEvent.tenLop}
+                    </div>
+                  </div>
+                )}
+
+                {/* Location */}
+                {selectedEvent.tenKhuVuc && (
+                  <div className={`p-5 rounded-2xl ${isDarkMode ? 'bg-gray-800/50' : 'bg-purple-50'}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <MapPin className="w-5 h-5 text-purple-600" strokeWidth={2} />
+                      <span className={`text-xs uppercase tracking-wider font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Khu vực
+                      </span>
+                    </div>
+                    <div className={`font-bold text-lg ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                      {selectedEvent.tenKhuVuc}
+                    </div>
+                  </div>
+                )}
+
+                {/* Day of Week */}
+                {selectedEvent.thu && (
+                  <div className={`p-5 rounded-2xl ${isDarkMode ? 'bg-gray-800/50' : 'bg-yellow-50'}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <CalendarDays className="w-5 h-5 text-yellow-600" strokeWidth={2} />
+                      <span className={`text-xs uppercase tracking-wider font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Ngày tập
+                      </span>
+                    </div>
+                    <div className={`font-bold text-lg ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                      {selectedEvent.thu.split('').map(day => {
+                        const dayMap = { '2': 'T2', '3': 'T3', '4': 'T4', '5': 'T5', '6': 'T6', '7': 'T7', 'C': 'CN', 'N': '' };
+                        return dayMap[day] || day;
+                      }).filter(Boolean).join(', ')}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Date Range */}
+              {(selectedEvent.ngayBD || selectedEvent.ngayKT) && (
+                <div className={`p-5 rounded-2xl ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <Calendar className="w-5 h-5 text-gray-600" strokeWidth={2} />
+                    <span className={`text-xs uppercase tracking-wider font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Thời hạn
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {selectedEvent.ngayBD && (
+                      <div>
+                        <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'} mb-1`}>Bắt đầu</div>
+                        <div className={`font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                          {new Date(selectedEvent.ngayBD).toLocaleDateString('vi-VN')}
+                        </div>
+                      </div>
+                    )}
+                    {selectedEvent.ngayBD && selectedEvent.ngayKT && (
+                      <div className={`text-gray-400`}>→</div>
+                    )}
+                    {selectedEvent.ngayKT && (
+                      <div>
+                        <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'} mb-1`}>Kết thúc</div>
+                        <div className={`font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                          {new Date(selectedEvent.ngayKT).toLocaleDateString('vi-VN')}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className={`p-6 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <button
+                onClick={() => setShowEventModal(false)}
+                className="w-full px-6 py-3.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Chat Bubble */}
       <ChatBubble />
