@@ -11,6 +11,7 @@ import RegisterService from './pages/RegisterService';
 import MyServices from './pages/MyServices';
 import TrainerHome from './pages/TrainerHome';
 import StaffHome from './pages/StaffHome';
+import StaffChat from './pages/StaffChat';
 
 // Replace with your actual Google Client ID from Google Cloud Console
 // You can also use environment variable: import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -26,6 +27,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/trainer/home" element={<TrainerHome />} />
           <Route path="/staff/home" element={<StaffHome />} />
+          <Route path="/staff/chat" element={<StaffChat />} />
           <Route path="/user/home" element={<UserHome />} />
           <Route path="/user/lich-tap" element={<UserSchedule />} />
           <Route path="/user/dich-vu-cua-toi" element={<MyServices />} />

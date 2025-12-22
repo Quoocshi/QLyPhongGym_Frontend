@@ -6,7 +6,7 @@ import {
   Eye, Wrench, CheckCircle, AlertTriangle,
   Plus, X, RefreshCw, MapPin, Calendar,
   ClipboardList, Settings, Activity, Search,
-  Filter, ChevronDown, ChevronUp
+  Filter, ChevronDown, ChevronUp, MessageCircle
 } from 'lucide-react';
 
 const StaffHome = () => {
@@ -205,6 +205,15 @@ const StaffHome = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {/* Chat Button */}
+              <button
+                onClick={() => navigate('/staff/chat')}
+                className={`flex items-center gap-2 px-5 py-2.5 ${isDarkMode ? 'bg-white/10 hover:bg-white/15' : 'bg-white/15 hover:bg-white/20'} rounded-xl transition-all backdrop-blur-sm shadow-md font-medium`}
+                title="Chat với khách hàng"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Chat</span>
+              </button>
               {/* Dark Mode Toggle */}
               <button
                 onClick={toggleDarkMode}
@@ -256,20 +265,20 @@ const StaffHome = () => {
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-t-xl font-medium transition-all ${activeTab === tab.key
-                      ? isDarkMode
-                        ? 'bg-gray-800 text-orange-400 shadow-lg'
-                        : 'bg-white text-orange-600 shadow-lg'
-                      : isDarkMode
-                        ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
-                        : 'bg-white/20 text-white hover:bg-white/30'
+                    ? isDarkMode
+                      ? 'bg-gray-800 text-orange-400 shadow-lg'
+                      : 'bg-white text-orange-600 shadow-lg'
+                    : isDarkMode
+                      ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                      : 'bg-white/20 text-white hover:bg-white/30'
                     }`}
                 >
                   <TabIcon className="w-4 h-4" />
                   {tab.label}
                   {tab.count !== undefined && (
                     <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === tab.key
-                        ? isDarkMode ? 'bg-orange-900 text-orange-300' : 'bg-orange-100 text-orange-600'
-                        : isDarkMode ? 'bg-gray-600' : 'bg-white/20'
+                      ? isDarkMode ? 'bg-orange-900 text-orange-300' : 'bg-orange-100 text-orange-600'
+                      : isDarkMode ? 'bg-gray-600' : 'bg-white/20'
                       }`}>
                       {tab.count}
                     </span>
@@ -359,7 +368,7 @@ const StaffHome = () => {
                           <div className={`w-full h-2 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
                             <div
                               className={`h-full rounded-full transition-all ${healthPercentage >= 80 ? 'bg-green-500' :
-                                  healthPercentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                healthPercentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
                                 }`}
                               style={{ width: `${healthPercentage}%` }}
                             />

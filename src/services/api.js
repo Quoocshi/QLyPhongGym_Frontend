@@ -213,6 +213,29 @@ export const staffService = {
     }
 };
 
+export const chatService = {
+    // Get all conversations for staff
+    getConversations: async () => {
+        const response = await api.get('/conversation-history');
+        return response.data;
+    },
+    // Get customer's own conversation
+    getMyConversation: async () => {
+        const response = await api.get('/conversations/my-conversation');
+        return response.data;
+    },
+    // Get message history for a conversation
+    getMessages: async (conversationId) => {
+        const response = await api.get(`/conversations/${conversationId}/messages`);
+        return response.data;
+    },
+    // Assign conversation to current staff
+    assignConversation: async (conversationId) => {
+        const response = await api.post(`/conversations/${conversationId}/assign`);
+        return response.data;
+    }
+};
+
 // JWT Token helpers
 export function parseJwt(token) {
     try {
