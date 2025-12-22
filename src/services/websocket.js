@@ -13,8 +13,10 @@ class WebSocketService {
 
     connect(token) {
         return new Promise((resolve, reject) => {
-            const API_URL = import.meta.env.VITE_API_URL || '/api';
-            const wsUrl = API_URL.replace('/api', '') + '/ws-chat';
+            //const API_URL = import.meta.env.VITE_API_URL || '/api';
+            const wsUrl = window.location.hostname === 'localhost' 
+            ? 'http://localhost:8081/ws-chat' 
+            : 'https://vina-gym.onrender.com/ws-chat';
 
             console.log('[WebSocket] Connecting to:', wsUrl);
             console.log('[WebSocket] Token:', token ? 'Present (length: ' + token.length + ')' : 'Missing');
