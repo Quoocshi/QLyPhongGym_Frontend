@@ -820,7 +820,31 @@ const RegisterService = () => {
                         <div className="flex-1">
                           <h3 className="text-lg font-bold text-gray-800 mb-1">{trainerName}</h3>
 
-                          {/* Gender & DOB */}
+                          {/* Quick meta: maNV, loaiNV, maBM, hoTen */}
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 mb-2">
+                            { (trainer.maNV || trainer.id) && (
+                              <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                                <span className="font-medium">Mã: {trainer.maNV || trainer.id}</span>
+                              </div>
+                            )}
+                            { trainer.loaiNV && (
+                              <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                                <span className="font-medium">Loại: {trainer.loaiNV}</span>
+                              </div>
+                            )}
+                            { trainer.maBM && (
+                              <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                                <span className="font-medium">Bộ môn: {trainer.maBM}</span>
+                              </div>
+                            )}
+                            { trainer.hoTen && trainer.hoTen !== trainerName && (
+                              <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                                <span className="font-medium">Tên đầy đủ: {trainer.hoTen}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Gender & DOB (if present) */}
                           <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
                             {trainer.gioiTinh && (
                               <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
