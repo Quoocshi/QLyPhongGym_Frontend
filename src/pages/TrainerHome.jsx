@@ -113,11 +113,26 @@ const TrainerHome = () => {
         console.log('Could not fetch debug/ptCustomers:', e);
       }
 
-      // Fetch lịch lớp và extract bộ môn
+      // Fetch lịch lớp and merge with PT schedules
       try {
         const lichLop = await trainerService.getLichLop();
         const dsLop = lichLop.dsLop || [];
+        const dsLichLop = lichLop.dsLichLop || []; // Lịch tập lớp
+        const dsCaTap = lichLop.dsCaTap || [];
+        const dsKhuVuc = lichLop.dsKhuVuc || [];
+
         setLopList(dsLop);
+
+        // Merge lịch tập lớp với lịch PT
+        setLichTapList(prev => {
+          const combined = [...prev, ...dsLichLop];
+          console.log('Combined schedules:', combined.length, '(PT:', prev.length, '+ Class:', dsLichLop.length, ')');
+          return combined;
+        });
+
+        // Update caTap and khuVuc từ lichLop nếu chưa có từ lichCaNhan
+        setCaTapList(prevList => prevList.length > 0 ? prevList : dsCaTap);
+        setKhuVucList(prevList => prevList.length > 0 ? prevList : dsKhuVuc);
 
         // Extract unique bộ môn từ danh sách lớp
         const boMonSet = new Map();
@@ -283,7 +298,7 @@ const TrainerHome = () => {
     return currentMonth.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
   };
 
-  // Lấy lịch tập cho một ngày cụ thể (dựa vào thu, thời hạn PT và trạng thái)
+  // Lấy lịch tập cho một ngày cụ thể (dựa vào thu, thời hạn PT/Lớp và trạng thái)
   const getSchedulesForDate = (dayValue, dateObj = null) => {
     return lichTapList.filter(lt => {
       // Không hiển thị lịch đã hủy (backend trả về "Huy")
@@ -300,21 +315,40 @@ const TrainerHome = () => {
         const checkDate = new Date(dateObj);
         checkDate.setHours(12, 0, 0, 0);
 
-        // Tìm thông tin khách hàng để lấy thời hạn PT
-        const kh = khachHangChiTiet.find(k => k.maKH === lt.maKH) ||
-          khachHangList.find(k => k.maKH === lt.maKH);
+        // Nếu là lịch PT: kiểm tra thời hạn khách hàng
+        if (lt.loaiLich === 'PT' || lt.maKH) {
+          const kh = khachHangChiTiet.find(k => k.maKH === lt.maKH) ||
+            khachHangList.find(k => k.maKH === lt.maKH);
 
-        if (kh) {
-          const ngayBD = kh.ngayBD ? new Date(kh.ngayBD) : null;
-          const ngayKT = kh.ngayKT ? new Date(kh.ngayKT) : null;
+          if (kh) {
+            const ngayBD = kh.ngayBD ? new Date(kh.ngayBD) : null;
+            const ngayKT = kh.ngayKT ? new Date(kh.ngayKT) : null;
 
-          // Set hours to 0 for accurate date comparison
-          if (ngayBD) ngayBD.setHours(0, 0, 0, 0);
-          if (ngayKT) ngayKT.setHours(23, 59, 59, 999);
+            // Set hours to 0 for accurate date comparison
+            if (ngayBD) ngayBD.setHours(0, 0, 0, 0);
+            if (ngayKT) ngayKT.setHours(23, 59, 59, 999);
 
-          // Kiểm tra ngày có nằm trong thời hạn PT không
-          if (ngayBD && checkDate < ngayBD) return false;
-          if (ngayKT && checkDate > ngayKT) return false;
+            // Kiểm tra ngày có nằm trong thời hạn PT không
+            if (ngayBD && checkDate < ngayBD) return false;
+            if (ngayKT && checkDate > ngayKT) return false;
+          }
+        }
+
+        // Nếu là lịch Lớp: kiểm tra thời hạn lớp
+        if (lt.loaiLich === 'Lop' || lt.maLop) {
+          const lop = lopList.find(l => l.maLop === lt.maLop);
+
+          if (lop) {
+            const lopNgayBD = lop.ngayBD ? new Date(lop.ngayBD) : null;
+            const lopNgayKT = lop.ngayKT ? new Date(lop.ngayKT) : null;
+
+            if (lopNgayBD) lopNgayBD.setHours(0, 0, 0, 0);
+            if (lopNgayKT) lopNgayKT.setHours(23, 59, 59, 999);
+
+            // Kiểm tra ngày có nằm trong thời hạn lớp không
+            if (lopNgayBD && checkDate < lopNgayBD) return false;
+            if (lopNgayKT && checkDate > lopNgayKT) return false;
+          }
         }
       }
 
@@ -395,17 +429,27 @@ const TrainerHome = () => {
   const handleHuyLichTap = async () => {
     if (!selectedEvent?.maLT) return;
 
+    // Xác định loại lịch (PT hay Lớp)
+    const isClassSchedule = selectedEvent.loaiLich === 'Lop' || selectedEvent.maLop;
+    const scheduleType = isClassSchedule ? 'Lớp' : 'PT';
+    const scheduleName = isClassSchedule
+      ? (selectedEvent.tenLop || selectedEvent.maLop)
+      : (selectedEvent.tenKhachHang || selectedEvent.hoTenKH);
+
     const confirmed = window.confirm(
-      `⚠️ CẢNH BÁO: Bạn có chắc muốn HỦY lịch tập của khách hàng "${selectedEvent.tenKhachHang || selectedEvent.hoTenKH}"?\n\nThao tác này không thể hoàn tác!`
+      `⚠️ CẢNH BÁO: Bạn có chắc muốn HỦY lịch ${scheduleType} "${scheduleName}"?\n\nThao tác này không thể hoàn tác!`
     );
 
     if (!confirmed) return;
 
     setActionLoading(true);
     try {
-      // Gọi API backend để hủy lịch
-      const result = await trainerService.huyLichPT(selectedEvent.maLT);
-      console.log('Kết quả hủy lịch:', result);
+      // Gọi API backend phù hợp
+      const result = isClassSchedule
+        ? await trainerService.huyLichLop(selectedEvent.maLT)
+        : await trainerService.huyLichPT(selectedEvent.maLT);
+
+      console.log(`Kết quả hủy lịch ${scheduleType}:`, result);
 
       // Kiểm tra response - backend có thể trả về success=true hoặc không có lỗi = thành công
       if (result.success === true || result.maLT || result.message?.includes('thành công')) {
@@ -413,27 +457,27 @@ const TrainerHome = () => {
         setLichTapList(prev => prev.filter(lt => lt.maLT !== selectedEvent.maLT));
 
         setShowEventModal(false);
-        setSuccessMsg('✅ Đã hủy lịch tập thành công! Lưới đã được cập nhật.');
+        setSuccessMsg(`✅ Đã hủy lịch ${scheduleType} thành công! Lưới đã được cập nhật.`);
         setTimeout(() => setSuccessMsg(''), 3000);
       } else if (result.success === false) {
-        setError(result.message || 'Không thể hủy lịch tập');
+        setError(result.message || `Không thể hủy lịch ${scheduleType}`);
       } else {
         // Nếu không có trường success nhưng có response = thành công (HTTP 200)
         setLichTapList(prev => prev.filter(lt => lt.maLT !== selectedEvent.maLT));
         setShowEventModal(false);
-        setSuccessMsg('✅ Đã hủy lịch tập thành công!');
+        setSuccessMsg(`✅ Đã hủy lịch ${scheduleType} thành công!`);
         setTimeout(() => setSuccessMsg(''), 3000);
       }
     } catch (err) {
-      console.error('Lỗi hủy lịch tập:', err);
+      console.error(`Lỗi hủy lịch ${scheduleType}:`, err);
       // Kiểm tra nếu thực tế API thành công nhưng response format lỗi
       if (err.response?.status === 200 || err.response?.data?.success === true) {
         setLichTapList(prev => prev.filter(lt => lt.maLT !== selectedEvent.maLT));
         setShowEventModal(false);
-        setSuccessMsg('✅ Đã hủy lịch tập thành công!');
+        setSuccessMsg(`✅ Đã hủy lịch ${scheduleType} thành công!`);
         setTimeout(() => setSuccessMsg(''), 3000);
       } else {
-        setError(err.response?.data?.message || err.message || 'Không thể hủy lịch tập. Vui lòng thử lại.');
+        setError(err.response?.data?.message || err.message || `Không thể hủy lịch ${scheduleType}. Vui lòng thử lại.`);
       }
     } finally {
       setActionLoading(false);
@@ -504,22 +548,12 @@ const TrainerHome = () => {
           setError(result.message || 'Không thể tạo lịch PT');
         }
       } else {
-        // Class mode: create schedule for the first selected day only
-        const startDate = new Date(formData.ngayBatDau);
-        const selectedDay = formData.thuTap[0];
-        const targetDate = new Date(startDate);
-        const currentDay = startDate.getDay();
-        const targetDayNum = selectedDay === 'CN' ? 0 : parseInt(selectedDay) - 1;
-
-        let daysToAdd = targetDayNum - currentDay;
-        if (daysToAdd < 0) daysToAdd += 7;
-
-        targetDate.setDate(startDate.getDate() + daysToAdd);
-        const ngayTapFormatted = targetDate.toISOString().split('T')[0];
+        // Class mode: create schedule with multiple days (like PT mode)
+        const thuString = formData.thuTap.join(''); // "246CN"
 
         const result = await trainerService.taoLichLop({
           maLop: formData.maLop,
-          ngayTap: ngayTapFormatted,
+          thuTap: thuString,  // Send concatenated days
           caTap: formData.caTap,
           maKV: formData.maKV
         });
@@ -837,13 +871,18 @@ const TrainerHome = () => {
                           <div className="space-y-1">
                             {schedulesForDay.slice(0, 2).map((schedule, sIdx) => {
                               const trangThai = getTrangThaiBadge(schedule.trangThai);
+                              // Hiển thị tên lớp cho lịch Lớp, tên KH cho lịch PT
+                              const displayName = schedule.loaiLich === 'Lop' || schedule.maLop
+                                ? (schedule.tenLop || schedule.maLop)
+                                : (schedule.tenKhachHang || schedule.hoTenKH || schedule.maKH);
+
                               return (
                                 <button
                                   key={schedule.maLT || sIdx}
                                   onClick={() => openEventModal(schedule)}
                                   className={`w-full px-1.5 py-1 rounded text-left text-xs ${trangThai.bg} ${trangThai.text} hover:shadow-sm transition-all truncate`}
                                 >
-                                  {schedule.tenKhachHang || schedule.hoTenKH || schedule.maKH}
+                                  {displayName}
                                 </button>
                               );
                             })}

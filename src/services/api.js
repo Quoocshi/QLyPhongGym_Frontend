@@ -181,6 +181,11 @@ export const trainerService = {
     huyLichPT: async (maLT) => {
         const response = await api.put(`/trainer/huy-lich-pt/${maLT}`);
         return response.data;
+    },
+    // Hủy lịch lớp
+    huyLichLop: async (maLT) => {
+        const response = await api.put(`/trainer/huy-lich-lop/${maLT}`);
+        return response.data;
     }
 };
 
