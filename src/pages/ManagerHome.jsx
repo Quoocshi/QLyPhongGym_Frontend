@@ -37,6 +37,7 @@ const ManagerHome = () => {
     const [classFormData, setClassFormData] = useState({
         tenLop: '',
         maBM: '',
+        maNV: '', // Trainer ID
         thoiHan: '30', // Default 30 days
         ngayBD: new Date().toISOString().split('T')[0],
         slToiDa: 20,
@@ -47,6 +48,7 @@ const ManagerHome = () => {
     // Register Modal State
     const [showModal, setShowModal] = useState(false);
     const [boMonList, setBoMonList] = useState([]);
+    const [nhanVienList, setNhanVienList] = useState([]);
     const [formData, setFormData] = useState({
         tenNV: '',
         email: '',
@@ -63,6 +65,7 @@ const ManagerHome = () => {
         // In a real app, you would fetch dashboard stats here
         // internalFetchStats();
         fetchBoMon();
+        fetchNhanVien();
     }, []);
 
     const fetchBoMon = async () => {
@@ -71,6 +74,15 @@ const ManagerHome = () => {
             setBoMonList(response.data || response);
         } catch (err) {
             console.error('Failed to fetch BoMon', err);
+        }
+    };
+
+    const fetchNhanVien = async () => {
+        try {
+            const response = await managerService.getAllNhanVien();
+            setNhanVienList(response.data || response);
+        } catch (err) {
+            console.error('Failed to fetch NhanVien', err);
         }
     };
 
@@ -160,14 +172,17 @@ const ManagerHome = () => {
         setSuccessMsg('');
 
         try {
-            if (!classFormData.tenLop || !classFormData.maBM || !classFormData.ngayBD || !classFormData.slToiDa) {
-                throw new Error('Vui lòng điền đầy đủ thông tin bắt buộc');
+            if (!classFormData.tenLop || !classFormData.maBM || !classFormData.maNV || !classFormData.ngayBD || !classFormData.slToiDa) {
+                throw new Error('Vui lòng điền đầy đủ thông tin bắt buộc (bao gồm Trainer)');
             }
 
             const payload = {
                 ...classFormData,
                 ngayBD: formatDate(classFormData.ngayBD)
             };
+
+            console.log('🔍 Payload gửi đến backend:', payload);
+            console.log('🔍 maNV:', payload.maNV);
 
             const response = await managerService.addLop(payload);
             setSuccessMsg(response.message || 'Tạo lớp thành công!');
@@ -176,6 +191,7 @@ const ManagerHome = () => {
             setClassFormData({
                 tenLop: '',
                 maBM: '',
+                maNV: '',
                 thoiHan: '30',
                 ngayBD: new Date().toISOString().split('T')[0],
                 slToiDa: 20,
@@ -612,13 +628,48 @@ const ManagerHome = () => {
                                                     required
                                                 >
                                                     <option value="">-- Chọn bộ môn --</option>
-                                                    {boMonList.map(bm => (
-                                                        <option key={bm.maBM} value={bm.maBM}>
-                                                            {bm.tenBM}
-                                                        </option>
-                                                    ))}
+                                                    {boMonList
+                                                        .filter(bm => ['Yoga', 'Zumba', 'Bơi', 'Boi'].includes(bm.tenBM))
+                                                        .map(bm => (
+                                                            <option key={bm.maBM} value={bm.maBM}>
+                                                                {bm.tenBM}
+                                                            </option>
+                                                        ))}
                                                 </select>
                                             </div>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Trainer <span className="text-red-500">*</span></label>
+                                            <div className="relative">
+                                                <User className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                                                <select
+                                                    name="maNV"
+                                                    value={classFormData.maNV}
+                                                    onChange={handleClassInputChange}
+                                                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border focus:ring-2 focus:outline-none transition-all ${isDarkMode
+                                                        ? 'bg-gray-700 border-gray-600 text-white focus:ring-emerald-500/50 focus:border-emerald-500'
+                                                        : 'bg-gray-50 border-gray-200 text-gray-900 focus:ring-emerald-500/20 focus:border-emerald-500'
+                                                        }`}
+                                                    required
+                                                    disabled={!classFormData.maBM}
+                                                >
+                                                    <option value="">-- Chọn Trainer --</option>
+                                                    {nhanVienList
+                                                        .filter(nv => nv.loaiNV === 'Trainer' && nv.maBM === classFormData.maBM)
+                                                        .map(trainer => (
+                                                            <option key={trainer.maNV} value={trainer.maNV}>
+                                                                {trainer.tenNV} ({trainer.maNV})
+                                                            </option>
+                                                        ))}
+                                                </select>
+                                            </div>
+                                            {!classFormData.maBM && (
+                                                <p className="text-xs text-yellow-600 mt-1">Vui lòng chọn Bộ môn trước</p>
+                                            )}
+                                            {classFormData.maBM && nhanVienList.filter(nv => nv.loaiNV === 'Trainer' && nv.maBM === classFormData.maBM).length === 0 && (
+                                                <p className="text-xs text-red-600 mt-1">Không có Trainer nào cho bộ môn này</p>
+                                            )}
                                         </div>
 
                                         <div className="space-y-1.5">
