@@ -235,8 +235,8 @@ const Login = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-orange-700">
           <img
             className="absolute inset-0 h-full w-full object-cover mix-blend-overlay opacity-80 animate-ken-burns"
-            src="https://images.unsplash.com/photo-1540497077202-7c8a33801524?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
-            alt="Gym background"
+            src="/images/Gym/1_Gym_PT.jpg"
+            alt="Personal Trainer - Gym VINA"
           />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>

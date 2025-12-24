@@ -136,6 +136,10 @@ export const dichVuGymService = {
     dangKyDichVuUniversal: async (payload) => {
         const response = await api.post('/dich-vu-gym/dang-ky-dv-universal', payload);
         return response.data;
+    },
+    huyDichVu: async (maCTDK) => {
+        const response = await api.post('/dich-vu-gym/huy-dich-vu', null, { params: { maCTDK } });
+        return response.data;
     }
 };
 

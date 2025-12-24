@@ -15,6 +15,13 @@ const formatDate = (dateString) => {
     return `${day}/${month}/${year}`;
 };
 
+// Parse date helper: DD/MM/YYYY -> YYYY-MM-DD
+const parseDate = (dateString) => {
+    if (!dateString) return '';
+    const [day, month, year] = dateString.split('/');
+    return `${year}-${month}-${day}`;
+};
+
 const ManagerHome = () => {
     const navigate = useNavigate();
     const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -39,7 +46,7 @@ const ManagerHome = () => {
         maBM: '',
         maNV: '', // Trainer ID
         thoiHan: '30', // Default 30 days
-        ngayBD: new Date().toISOString().split('T')[0],
+        ngayBD: formatDate(new Date().toISOString().split('T')[0]),
         slToiDa: 20,
         moTa: '',
         ghiChu: ''
@@ -178,7 +185,7 @@ const ManagerHome = () => {
 
             const payload = {
                 ...classFormData,
-                ngayBD: formatDate(classFormData.ngayBD)
+                ngayBD: parseDate(classFormData.ngayBD) // Convert dd/MM/yyyy to yyyy-MM-dd for backend
             };
 
             console.log('🔍 Payload gửi đến backend:', payload);
@@ -193,7 +200,7 @@ const ManagerHome = () => {
                 maBM: '',
                 maNV: '',
                 thoiHan: '30',
-                ngayBD: new Date().toISOString().split('T')[0],
+                ngayBD: formatDate(new Date().toISOString().split('T')[0]),
                 slToiDa: 20,
                 moTa: '',
                 ghiChu: ''
