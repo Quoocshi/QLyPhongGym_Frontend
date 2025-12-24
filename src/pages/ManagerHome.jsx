@@ -15,6 +15,13 @@ const formatDate = (dateString) => {
     return `${day}/${month}/${year}`;
 };
 
+// Parse date helper: DD/MM/YYYY -> YYYY-MM-DD
+const parseDate = (dateString) => {
+    if (!dateString) return '';
+    const [day, month, year] = dateString.split('/');
+    return `${year}-${month}-${day}`;
+};
+
 const ManagerHome = () => {
     const navigate = useNavigate();
     const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -39,7 +46,7 @@ const ManagerHome = () => {
         maBM: '',
         maNV: '', // Trainer ID
         thoiHan: '30', // Default 30 days
-        ngayBD: new Date().toISOString().split('T')[0],
+        ngayBD: formatDate(new Date().toISOString().split('T')[0]),
         slToiDa: 20,
         moTa: '',
         ghiChu: ''
@@ -177,8 +184,8 @@ const ManagerHome = () => {
             }
 
             const payload = {
-                ...classFormData
-                // ngayBD is already in ISO format (yyyy-MM-dd) from the date input
+                ...classFormData,
+                ngayBD: parseDate(classFormData.ngayBD) // Convert dd/MM/yyyy to yyyy-MM-dd for backend
             };
 
             console.log('🔍 Payload gửi đến backend:', payload);
@@ -193,7 +200,7 @@ const ManagerHome = () => {
                 maBM: '',
                 maNV: '',
                 thoiHan: '30',
-                ngayBD: new Date().toISOString().split('T')[0],
+                ngayBD: formatDate(new Date().toISOString().split('T')[0]),
                 slToiDa: 20,
                 moTa: '',
                 ghiChu: ''
@@ -699,7 +706,7 @@ const ManagerHome = () => {
                                             <div className="relative">
                                                 <Calendar className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
                                                 <input
-                                                    type="date"
+                                                    type="text"
                                                     name="ngayBD"
                                                     value={classFormData.ngayBD}
                                                     onChange={handleClassInputChange}
@@ -707,6 +714,9 @@ const ManagerHome = () => {
                                                         ? 'bg-gray-700 border-gray-600 text-white focus:ring-emerald-500/50 focus:border-emerald-500'
                                                         : 'bg-gray-50 border-gray-200 text-gray-900 focus:ring-emerald-500/20 focus:border-emerald-500'
                                                         }`}
+                                                    placeholder="24/12/2025"
+                                                    pattern="\d{2}/\d{2}/\d{4}"
+                                                    title="Định dạng: dd/mm/yyyy (VD: 24/12/2025)"
                                                     required
                                                 />
                                             </div>
