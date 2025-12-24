@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { userService, authService } from '../services/api';
+import { userService, authService, dichVuGymService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Mail, Phone, LogOut, Calendar, Clock, MapPin,
@@ -40,6 +40,7 @@ const UserHome = () => {
   const [homeInfo, setHomeInfo] = useState(null);
   const [taiKhoan, setTaiKhoan] = useState(null);
   const [lichTapList, setLichTapList] = useState([]);
+  const [dichVuList, setDichVuList] = useState([]); // Danh sách dịch vụ đã đăng ký
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -145,6 +146,21 @@ const UserHome = () => {
         console.error('Error details:', e.response?.data);
         setLichTapList([]);
       }
+
+      // Fetch dịch vụ đã đăng ký
+      try {
+        console.log('📞 Calling dichVuGymService.getDichVuCuaToi()...');
+        const dichVuData = await dichVuGymService.getDichVuCuaToi();
+        console.log('✅ Dịch vụ data:', dichVuData);
+        const dichVuArray = dichVuData.dichVuDaDangKy || [];
+        console.log('📊 DichVu array:', dichVuArray);
+        setDichVuList(dichVuArray);
+      } catch (e) {
+        console.error('❌ Error fetching dich vu:', e);
+        console.error('Error details:', e.response?.data);
+        setDichVuList([]);
+      }
+
       console.log('✅ fetchAllData completed');
     } catch (err) {
       console.error('❌ Error fetching data:', err);
@@ -426,18 +442,37 @@ const UserHome = () => {
           {/* Stats - Clean Glassmorphism Cards */}
           <div className="grid grid-cols-3 gap-5 mt-8">
             <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/20 border-white/30'} backdrop-blur-xl rounded-2xl p-5 text-center border shadow-xl`}>
-              <div className="text-4xl font-extrabold tracking-tight">{(lichTapList || []).length}</div>
-              <div className={`text-sm mt-2 font-medium ${isDarkMode ? 'text-gray-200' : 'text-white/90'}`}>Lịch tập</div>
+              <div className="text-4xl font-extrabold tracking-tight">
+                {(() => {
+                  const today = new Date();
+                  const dayOfWeek = today.getDay();
+                  const todayValue = dayOfWeek === 0 ? 'CN' : String(dayOfWeek + 1);
+                  return getSchedulesForDate(todayValue, today).length;
+                })()}
+              </div>
+              <div className={`text-sm mt-2 font-medium ${isDarkMode ? 'text-gray-200' : 'text-white/90'}`}>Lịch tập hôm nay</div>
             </div>
             <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/20 border-white/30'} backdrop-blur-xl rounded-2xl p-5 text-center border shadow-xl`}>
               <div className="text-4xl font-extrabold tracking-tight">
-                {(lichTapList || []).filter(lt => lt.trangThai?.toLowerCase().includes('mo')).length}
+                {(dichVuList || []).filter(dv => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+
+                  const ngayKT = dv.ngayKT || dv.ngayKetThuc;
+                  if (ngayKT) {
+                    const endDate = new Date(ngayKT);
+                    endDate.setHours(23, 59, 59, 999);
+                    return endDate >= today;
+                  }
+
+                  return true;
+                }).length}
               </div>
               <div className={`text-sm mt-2 font-medium ${isDarkMode ? 'text-gray-200' : 'text-white/90'}`}>Đang hoạt động</div>
             </div>
             <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/20 border-white/30'} backdrop-blur-xl rounded-2xl p-5 text-center border shadow-xl`}>
               <div className="text-4xl font-extrabold tracking-tight">
-                {new Set((lichTapList || []).map(lt => lt.tenDichVu || lt.tenLop).filter(Boolean)).size}
+                {(dichVuList || []).length}
               </div>
               <div className={`text-sm mt-2 font-medium ${isDarkMode ? 'text-gray-200' : 'text-white/90'}`}>Dịch vụ</div>
             </div>
@@ -447,7 +482,17 @@ const UserHome = () => {
           <div className="flex gap-2 mt-6">
             {[
               { key: 'overview', label: 'Tổng quan', icon: BookOpen },
-              { key: 'schedule', label: 'Lịch tập', icon: Grid3X3, count: lichTapList.length },
+              {
+                key: 'schedule',
+                label: 'Lịch tập',
+                icon: Grid3X3,
+                count: (() => {
+                  const today = new Date();
+                  const dayOfWeek = today.getDay();
+                  const todayValue = dayOfWeek === 0 ? 'CN' : String(dayOfWeek + 1);
+                  return getSchedulesForDate(todayValue, today).length;
+                })()
+              },
               { key: 'profile', label: 'Thông tin cá nhân', icon: FileText }
             ].map(tab => {
               const TabIcon = tab.icon;
@@ -490,7 +535,17 @@ const UserHome = () => {
               <h3 className={`text-xs font-bold uppercase tracking-widest ${isDarkMode ? 'text-gray-500' : 'text-gray-400'} mb-6`}>Navigation</h3>
               {[
                 { key: 'overview', label: 'Tổng quan', icon: BookOpen },
-                { key: 'schedule', label: 'Lịch tập', icon: Grid3X3, count: lichTapList.length },
+                {
+                  key: 'schedule',
+                  label: 'Lịch tập',
+                  icon: Grid3X3,
+                  count: (() => {
+                    const today = new Date();
+                    const dayOfWeek = today.getDay();
+                    const todayValue = dayOfWeek === 0 ? 'CN' : String(dayOfWeek + 1);
+                    return getSchedulesForDate(todayValue, today).length;
+                  })()
+                },
                 { key: 'profile', label: 'Thông tin cá nhân', icon: FileText }
               ].map(tab => {
                 const TabIcon = tab.icon;
