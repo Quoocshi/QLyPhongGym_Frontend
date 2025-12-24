@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { dichVuGymService } from '../services/api';
 import BackToUserHome from '../components/BackToUserHome';
-import { User, Calendar, Clock, Box, Activity, Smile } from 'lucide-react';
+import { User, Calendar, Clock, Box, Activity, Smile, XCircle } from 'lucide-react';
 
 const dateFormatter = (iso) => {
   if (!iso) return '-';
@@ -22,7 +22,7 @@ const currency = (value) => {
   }
 };
 
-const ServiceCard = ({ item }) => {
+const ServiceCard = ({ item, onCancel }) => {
   const isClass = !!item.tenLop; // Check if it's a class
   const isPT = !!item.tenNV && !isClass; // Check if it's PT (has Instructor but no Class Name)
 
@@ -146,6 +146,19 @@ const ServiceCard = ({ item }) => {
           </div>
         </div>
       </div>
+
+      {/* Cancel Button - Only show for active services */}
+      {!isExpired && (
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <button
+            onClick={() => onCancel(item)}
+            className="w-full px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 text-sm font-semibold"
+          >
+            <XCircle className="w-4 h-4" />
+            Hủy gói tập
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -154,6 +167,9 @@ const MyServices = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
+  const [cancelModal, setCancelModal] = useState({ show: false, item: null });
+  const [canceling, setCanceling] = useState(false);
+  const [cancelError, setCancelError] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -171,6 +187,39 @@ const MyServices = () => {
     load();
     return () => { mounted = false; };
   }, []);
+
+  const handleCancelClick = (item) => {
+    setCancelModal({ show: true, item });
+    setCancelError(null);
+  };
+
+  const handleCancelConfirm = async () => {
+    const item = cancelModal.item;
+    if (!item || !item.maDV) return;
+
+    setCanceling(true);
+    setCancelError(null);
+
+    try {
+      await dichVuGymService.huyDichVu(item.maCTDK);
+
+      // Close modal
+      setCancelModal({ show: false, item: null });
+
+      // Reload services list
+      const res = await dichVuGymService.getDichVuCuaToi();
+      setData(res);
+    } catch (e) {
+      setCancelError(e.response?.data?.error || e.message || 'Lỗi khi hủy dịch vụ');
+    } finally {
+      setCanceling(false);
+    }
+  };
+
+  const handleCancelClose = () => {
+    setCancelModal({ show: false, item: null });
+    setCancelError(null);
+  };
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -255,12 +304,80 @@ const MyServices = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {ds.map((item, idx) => (
-                <ServiceCard key={idx} item={item} />
+                <ServiceCard key={idx} item={item} onCancel={handleCancelClick} />
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* Cancellation Confirmation Modal */}
+      {cancelModal.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <XCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-gray-900 mb-1">Xác nhận hủy gói tập</h3>
+                <p className="text-sm text-gray-500">Bạn có chắc chắn muốn hủy dịch vụ này?</p>
+              </div>
+            </div>
+
+            {cancelModal.item && (
+              <div className="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
+                <div className="text-sm font-semibold text-gray-900 mb-1">{cancelModal.item.tenDichVu || cancelModal.item.tenDV}</div>
+                <div className="text-xs text-gray-500">Mã: {cancelModal.item.maDV}</div>
+                <div className="text-sm font-bold text-pink-600 mt-2">{currency(cancelModal.item.giaTien || cancelModal.item.gia)}</div>
+              </div>
+            )}
+
+            {/* Non-Refund Warning */}
+            <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <div className="text-red-600 text-xl">⚠️</div>
+                <div>
+                  <div className="text-red-900 font-bold text-sm mb-1">Lưu ý quan trọng</div>
+                  <div className="text-red-700 text-sm">
+                    Gói tập đã hủy sẽ <strong>KHÔNG được hoàn tiền</strong>. Vui lòng cân nhắc kỹ trước khi xác nhận.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {cancelError && (
+              <div className="bg-red-100 border border-red-300 rounded-lg p-3 mb-4">
+                <p className="text-red-700 text-sm">{cancelError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelClose}
+                disabled={canceling}
+                className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors disabled:opacity-50"
+              >
+                Không, giữ lại
+              </button>
+              <button
+                onClick={handleCancelConfirm}
+                disabled={canceling}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {canceling ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Đang hủy...
+                  </>
+                ) : (
+                  'Xác nhận hủy'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
