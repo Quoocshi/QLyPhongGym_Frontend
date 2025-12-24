@@ -11,7 +11,8 @@ import BackToUserHome from '../components/BackToUserHome';
 const RegisterService = () => {
   const [boMonList, setBoMonList] = useState([]);
   const [selectedBoMon, setSelectedBoMon] = useState(null);
-  const [dichVuList, setDichVuList] = useState([]);
+  const [dichVuList, setDichVuList] = useState([]); // Current sport's services
+  const [allDichVu, setAllDichVu] = useState([]); // All services from all selected sports
   const [khachHang, setKhachHang] = useState(null);
   const [accountId, setAccountId] = useState(null);
   const [selectedDV, setSelectedDV] = useState([]); // array of maDV
@@ -54,11 +55,11 @@ const RegisterService = () => {
   // compute total price
   const totalPrice = useMemo(() => {
     return selectedDV.reduce((sum, maDV) => {
-      const dv = dichVuList.find(x => x.maDV === maDV);
+      const dv = allDichVu.find(x => x.maDV === maDV);
       const p = Number(dv?.donGia || dv?.gia || 0) || 0;
       return sum + p;
     }, 0);
-  }, [selectedDV, dichVuList]);
+  }, [selectedDV, allDichVu]);
 
   const loadDichVu = async (maBM) => {
     try {
@@ -66,7 +67,18 @@ const RegisterService = () => {
       const res = await dichVuGymService.getDichVuTheoBoMon(maBM);
       const boMon = res.boMon || res;
       setSelectedBoMon(boMon);
-      setDichVuList(boMon.danhSachDichVu || []);
+      const newServices = boMon.danhSachDichVu || [];
+      setDichVuList(newServices);
+
+      // Add new services to allDichVu, avoiding duplicates
+      setAllDichVu(prevAll => {
+        const existingIds = new Set(prevAll.map(dv => dv.maDV));
+        const toAdd = newServices
+          .filter(dv => !existingIds.has(dv.maDV))
+          .map(dv => ({ ...dv, tenBM: boMon.tenBM })); // Attach sport name
+        return [...prevAll, ...toAdd];
+      });
+
       setStep(2);
     } catch (err) {
       setError(err.response?.data || err.message || 'Lỗi khi tải dịch vụ');
@@ -134,7 +146,7 @@ const RegisterService = () => {
     const servicesNeedingClass = [];
 
     for (const maDV of selectedDV) {
-      const dv = dichVuList.find(x => x.maDV === maDV);
+      const dv = allDichVu.find(x => x.maDV === maDV);
       if (!dv) continue;
 
       if (dv.loaiDV === 'PT' && !selectedTrainerByDV[maDV]) {
@@ -659,12 +671,20 @@ const RegisterService = () => {
                 ) : (
                   <div className="space-y-2">
                     {selectedDV.map(maDV => {
-                      const dv = dichVuList.find(x => x.maDV === maDV);
+                      const dv = allDichVu.find(x => x.maDV === maDV);
                       if (!dv) return null;
                       return (
-                        <div key={maDV} className="flex items-center justify-between text-sm">
-                          <span className="text-gray-700 truncate flex-1">{dv.tenDV}</span>
-                          <span className="font-semibold text-primary ml-2">{formatPrice(dv.donGia || 0)}</span>
+                        <div key={maDV} className="flex flex-col gap-1 p-2 bg-gray-50 rounded-lg">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-700 truncate flex-1">{dv.tenDV}</span>
+                            <span className="font-semibold text-primary ml-2">{formatPrice(dv.donGia || 0)}</span>
+                          </div>
+                          {dv.tenBM && (
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <Target className="w-3 h-3" />
+                              {dv.tenBM}
+                            </span>
+                          )}
                         </div>
                       );
                     })}
@@ -682,7 +702,7 @@ const RegisterService = () => {
                   {Object.entries(selectedTrainerByDV)
                     .filter(([_, trainerId]) => trainerId) // Only show if trainer is selected
                     .map(([maDV, trainerId]) => {
-                      const dv = dichVuList.find(x => x.maDV === maDV);
+                      const dv = allDichVu.find(x => x.maDV === maDV);
                       const trainer = trainerOptions[maDV]?.find(t => (t.maNV || t.id) === trainerId);
                       return (
                         <div key={maDV} className="text-sm text-gray-600">
@@ -765,7 +785,7 @@ const RegisterService = () => {
                 <div>
                   <h2 className="text-2xl font-extrabold">Chọn Personal Trainer</h2>
                   <p className="text-orange-100 text-sm mt-1">
-                    {dichVuList.find(d => d.maDV === currentServiceForPT)?.tenDV}
+                    {allDichVu.find(d => d.maDV === currentServiceForPT)?.tenDV}
                   </p>
                 </div>
               </div>
@@ -965,7 +985,7 @@ const RegisterService = () => {
                 <div>
                   <h2 className="text-2xl font-extrabold">Chọn Lớp Học</h2>
                   <p className="text-blue-100 text-sm mt-1">
-                    {dichVuList.find(d => d.maDV === currentServiceForClass)?.tenDV}
+                    {allDichVu.find(d => d.maDV === currentServiceForClass)?.tenDV}
                   </p>
                 </div>
               </div>
@@ -986,7 +1006,14 @@ const RegisterService = () => {
             <div className="flex-1 overflow-y-auto p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {classOptions[currentServiceForClass]
-                  .filter(lop => !lop.ngayKT || new Date(lop.ngayKT) >= new Date().setHours(0, 0, 0, 0))
+                  .filter(lop => {
+                    if (!lop.ngayKT) return true;
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const endDate = new Date(lop.ngayKT);
+                    endDate.setHours(0, 0, 0, 0);
+                    return endDate >= today;
+                  })
                   .map(lop => {
                     const isSelected = selectedClassByDV[currentServiceForClass] === lop.maLop;
                     const slotsFilled = lop.slHienTai || 0;
