@@ -177,8 +177,8 @@ const ManagerHome = () => {
             }
 
             const payload = {
-                ...classFormData,
-                ngayBD: formatDate(classFormData.ngayBD)
+                ...classFormData
+                // ngayBD is already in ISO format (yyyy-MM-dd) from the date input
             };
 
             console.log('🔍 Payload gửi đến backend:', payload);
